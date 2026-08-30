@@ -1,0 +1,20 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+*.tsbuildinfo
+
+# env / secrets — never commit the real key
+.env
+.env.local
+.env.*.local
+
+# runtime connection override (may contain a token) + local data
+.nedb-studio.json
+nedb-data/
+
+# logs / os
+npm-debug.log*
+yarn-error.log*
+.DS_Store

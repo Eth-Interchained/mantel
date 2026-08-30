@@ -1,0 +1,689 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * NEDB Links — three app themes, one DOM.
+ *
+ *   pro    (default) — light, airy, professional-network trust. Teal
+ *                      Interchained accent, flat surfaces, quiet borders.
+ *   native           — the sovereign dark: ink canvas, electric cyan glow.
+ *   v3 "signal"      — the publishing studio. Editorial light: #F7F8FA
+ *                      canvas, white elevated cards, one strong blue,
+ *                      Inter Tight display, soft labels, layered depth.
+ *
+ * Everything reads CSS variables. Components use semantic tokens (ink
+ * scale, fg scale, accent) plus the component classes below — so a theme
+ * changes look AND feel (radius, shadow, type, labels) with zero JSX forks.
+ */
+
+:root,
+[data-theme="pro"] {
+  color-scheme: light;
+
+  /* surfaces: 950 = page, 900 = card, 850 = inset, 800/700 = borders */
+  --ink-950: 243 246 248;   /* #f3f6f8 page */
+  --ink-900: 255 255 255;   /* card */
+  --ink-850: 246 248 250;   /* inset field */
+  --ink-800: 226 232 240;   /* border */
+  --ink-700: 203 213 225;   /* strong border */
+
+  /* text */
+  --fg: 15 23 42;           /* #0f172a */
+  --fg-muted: 71 85 105;    /* #475569 */
+  --fg-subtle: 100 116 139; /* #64748b */
+  --fg-faint: 148 163 184;  /* #94a3b8 */
+
+  /* Interchained cyan, deepened for light backgrounds */
+  --accent: 14 116 144;       /* cyan-700 */
+  --accent-soft: 21 94 117;   /* cyan-800 — link text on light */
+  --accent-glow: 6 182 212;   /* cyan-500 */
+
+  --glow-alpha: 0.10;
+
+  /* feel — pro stays flat and bordered */
+  --radius-card: 1rem;
+  --radius-ctl: 0.75rem;
+  --shadow-card: 0 0 0 0 transparent;
+  --shadow-card-hover: 0 1px 2px rgb(15 23 42 / 0.05), 0 8px 24px -12px rgb(15 23 42 / 0.10);
+  --shadow-pop: 0 20px 50px -12px rgb(15 23 42 / 0.18);
+  --ring-focus: 0 0 0 3px rgb(var(--accent) / 0.12);
+  --field-border: 203 213 225;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+[data-theme="native"] {
+  color-scheme: dark;
+
+  --ink-950: 7 10 18;      /* #070a12 */
+  --ink-900: 13 18 30;
+  --ink-850: 17 22 34;
+  --ink-800: 24 31 46;
+  --ink-700: 39 48 66;
+
+  --fg: 248 250 252;
+  --fg-muted: 148 163 184;
+  --fg-subtle: 100 116 139;
+  --fg-faint: 71 85 105;
+
+  --accent: 34 211 238;       /* #22d3ee */
+  --accent-soft: 103 232 249; /* #67e8f9 */
+  --accent-glow: 6 182 212;
+
+  --glow-alpha: 0.45;
+
+  /* feel — native keeps its neon-edge identity */
+  --radius-card: 1rem;
+  --radius-ctl: 0.75rem;
+  --shadow-card: 0 0 0 0 transparent;
+  --shadow-card-hover: 0 0 0 1px rgb(var(--accent) / 0.18), 0 12px 40px -12px rgb(var(--accent) / var(--glow-alpha));
+  --shadow-pop: 0 0 0 1px rgb(var(--accent) / 0.22), 0 24px 70px -18px rgb(var(--accent) / var(--glow-alpha));
+  --ring-focus: 0 0 0 3px rgb(var(--accent) / 0.18);
+  --field-border: 39 48 66;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+/*
+ * v3 — Signal. Calm, precise, editorial. Less dashboard, more
+ * publishing software: white cards float on #F7F8FA, one strong blue,
+ * Inter Tight headings, soft sentence-case labels, layered shadows.
+ */
+[data-theme="v3"] {
+  color-scheme: light;
+
+  --ink-950: 247 248 250;   /* #f7f8fa app canvas */
+  --ink-900: 255 255 255;   /* elevated white card */
+  --ink-850: 248 250 252;   /* #f8fafc secondary surface / fields */
+  --ink-800: 229 231 235;   /* #e5e7eb card border */
+  --ink-700: 203 213 225;   /* #cbd5e1 strong border (secondary buttons) */
+
+  --fg: 17 24 39;           /* #111827 */
+  --fg-muted: 107 114 128;  /* #6b7280 */
+  --fg-subtle: 148 163 184; /* #94a3b8 muted labels */
+  --fg-faint: 203 213 225;
+
+  /* one strong blue */
+  --accent: 37 99 235;      /* #2563eb */
+  --accent-soft: 29 78 216; /* #1d4ed8 — hover / link text */
+  --accent-glow: 96 165 250;/* #60a5fa */
+
+  --glow-alpha: 0;
+
+  /* feel — elevation instead of outlines */
+  --radius-card: 18px;
+  --radius-ctl: 12px;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px rgb(15 23 42 / 0.06);
+  --shadow-card-hover: 0 2px 4px rgb(15 23 42 / 0.05), 0 12px 32px rgb(15 23 42 / 0.10);
+  --shadow-pop: 0 24px 60px rgb(15 23 42 / 0.15);
+  --ring-focus: 0 0 0 4px rgb(37 99 235 / 0.12);
+  --field-border: 226 232 240; /* #e2e8f0 */
+  --font-display: "Inter Tight", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+/*
+ * mach — silver slick at mach 5. Gunmetal canvas, brushed-graphite
+ * cards with a machined top catch-light, CHROME primary buttons
+ * (dark text on polished steel — the luxury-auto move: monochrome
+ * interaction, color delivered as motion). The color arrives as
+ * streams: a light-trail running the nav edge and an ambient
+ * spectrum drifting in the canvas. Pure CSS3. SpaceX elegance,
+ * Porsche restraint.
+ */
+[data-theme="kundli"] {
+  /* iKundli — Sukuna's actual India register, read from his shipped
+     source (assets/index-34wTfKLZ.css @theme block), not guessed:
+     bg-primary #FCFAF7, text-primary #120F0D, text-secondary #4A3E39,
+     text-muted #7A6D66, soft-border #E5DDD7, warm-ivory #F7EFE9,
+     warm-cream #EFE4DC. Playfair Display carries the display voice
+     over Outfit body — his real pairing, not a substitute. */
+  color-scheme: light;
+
+  --ink-950: 252 250 247;   /* #FCFAF7 bg-primary */
+  --ink-900: 255 255 255;   /* glass-white — card */
+  --ink-850: 247 239 233;   /* #F7EFE9 warm-ivory, inset */
+  --ink-800: 239 228 220;   /* #EFE4DC warm-cream, border */
+  --ink-700: 229 221 215;   /* #E5DDD7 soft-border, strong */
+
+  --fg: 18 15 13;           /* #120F0D text-primary */
+  --fg-muted: 74 62 57;     /* #4A3E39 text-secondary */
+  --fg-subtle: 122 109 102; /* #7A6D66 text-muted */
+  --fg-faint: 168 154 143;
+
+  /* marigold — his UPI/commerce accent (#F37A20), deepened for AA
+     contrast on porcelain where his own build leans on weight/size. */
+  --accent: 200 92 16;        /* #C85C10 */
+  --accent-soft: 166 74 12;   /* link text on light */
+  --accent-glow: 243 122 32;  /* #F37A20 — his literal UPI orange */
+
+  --glow-alpha: 0.09;
+
+  --radius-card: 1.75rem;     /* ceramic: generous, soft */
+  --radius-ctl: 1rem;
+  --shadow-card: 0 1px 2px rgb(18 15 13 / 0.03), 0 12px 32px -20px rgb(18 15 13 / 0.16);
+  --shadow-card-hover: 0 2px 6px rgb(18 15 13 / 0.05), 0 22px 48px -24px rgb(18 15 13 / 0.22);
+  --shadow-pop: 0 28px 70px -20px rgb(18 15 13 / 0.24);
+  --ring-focus: 0 0 0 3px rgb(var(--accent) / 0.14);
+  --field-border: 229 221 215;
+  --font-display: "Playfair Display", "Instrument Serif", Georgia, serif;
+  --font-body: "Outfit", "Inter", system-ui, sans-serif;
+}
+
+/* SocialProof marquee — two infinite rows, opposite direction, from
+   Sukuna's real component. Edge mask so rows fade instead of clipping. */
+@keyframes kundli-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-33.333%); }
+}
+@keyframes kundli-marquee-rev {
+  from { transform: translateX(-33.333%); }
+  to { transform: translateX(0); }
+}
+.kundli-marquee-mask {
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[kundli-marquee"] {
+    animation: none !important;
+  }
+}
+
+/* The serif display wants air, not tight tracking — undo the sans
+   letter-spacing the other themes rely on. */
+[data-theme="kundli"] .font-display,
+[data-theme="kundli"] h1,
+[data-theme="kundli"] h2 {
+  letter-spacing: -0.015em;
+  font-weight: 400;
+}
+[data-theme="kundli"] .kicker {
+  letter-spacing: 0.18em;
+  font-family: "Outfit", system-ui, sans-serif;
+  font-weight: 700;
+}
+
+[data-theme="mach"] {
+  color-scheme: dark;
+
+  --ink-950: 10 12 16;      /* #0a0c10 gunmetal black */
+  --ink-900: 18 21 28;      /* graphite card */
+  --ink-850: 23 27 35;      /* inset */
+  --ink-800: 39 45 58;      /* steel border */
+  --ink-700: 55 64 81;      /* strong border */
+
+  --fg: 244 246 249;        /* silver white */
+  --fg-muted: 154 167 184;
+  --fg-subtle: 110 123 143;
+  --fg-faint: 72 83 106;
+
+  /* the accent IS chrome — polished steel, dark text rides on it */
+  --accent: 203 213 225;      /* #cbd5e1 */
+  --accent-soft: 226 232 240; /* #e2e8f0 — link text on dark */
+  --accent-glow: 148 163 184;
+
+  --glow-alpha: 0.22;
+
+  /* feel — machined: tighter radii, deep shadows, metal catch-light */
+  --radius-card: 14px;
+  --radius-ctl: 10px;
+  --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 10px 30px -10px rgb(0 0 0 / 0.5);
+  --shadow-card-hover: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 16px 44px -12px rgb(0 0 0 / 0.6);
+  --shadow-pop: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 30px 80px -20px rgb(0 0 0 / 0.7), 0 0 60px -12px rgb(129 140 248 / 0.25);
+  --ring-focus: 0 0 0 3px rgb(203 213 225 / 0.18);
+  --field-border: 55 64 81;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+html,
+body {
+  @apply bg-ink-950 text-fg antialiased;
+  font-family: var(--font-body);
+  /* Mobile guarantee: any child poking past the right edge would
+   * stretch the layout viewport — the page zooms out and the nav looks
+   * narrower than the content (the IMG_2773 bug). clip (NOT hidden — it
+   * creates no scroll container) makes that class of bug impossible:
+   * offenders get clipped instead of resizing the world. Root causes
+   * still get fixed when found; this is the seatbelt. */
+  overflow-x: clip;
+}
+
+/* ── mach signature effects — pure CSS3, invisible in other themes ── */
+
+/* Ambient color stream: two soft spectrum washes drifting at the edge
+ * of vision. Fixed, non-interactive, ~5% alpha — speed you feel. */
+[data-theme="mach"] body::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 30% at 15% 20%, rgb(34 211 238 / 0.06), transparent 70%),
+    radial-gradient(45% 35% at 85% 75%, rgb(129 140 248 / 0.07), transparent 70%),
+    radial-gradient(30% 25% at 60% 10%, rgb(244 114 182 / 0.04), transparent 70%);
+  animation: mach-drift 60s ease-in-out infinite alternate;
+}
+@keyframes mach-drift {
+  from { transform: translate3d(-2%, -1%, 0) scale(1); }
+  to   { transform: translate3d(2%, 1.5%, 0) scale(1.06); }
+}
+
+/* The light trail: a spectrum streak running along .streamline edges
+ * (nav + studio action bar carry the class; inert outside mach). */
+.streamline { position: relative; }
+[data-theme="mach"] .streamline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(34 211 238 / 0.5) 25%,
+    rgb(129 140 248 / 0.8) 50%,
+    rgb(244 114 182 / 0.5) 75%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: mach-stream 7s linear infinite;
+}
+@keyframes mach-stream {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* Chrome type — the brochure moment. Only the hero wears it. */
+[data-theme="mach"] .chrome-text,
+[data-theme="mach"] .chrome-text .text-accent {
+  background: linear-gradient(180deg, #ffffff 8%, #cbd5e1 45%, #64748b 78%, #a5afc0 96%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Chrome primary buttons: machined steel + a hover sheen sweep. */
+[data-theme="mach"] .btn-primary {
+  background-image:
+    linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.75) 50%, transparent 70%),
+    linear-gradient(180deg, #f8fafc, #cbd5e1 52%, #94a3b8);
+  background-size: 250% 100%, 100% 100%;
+  background-position: 215% 0, 0 0;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 2px 10px -2px rgb(0 0 0 / 0.6);
+  transition: background-position 0.6s ease, transform 0.1s ease, filter 0.15s ease;
+}
+[data-theme="mach"] .btn-primary:hover:not(:disabled) {
+  background-color: transparent;
+  background-position: -115% 0, 0 0;
+  filter: brightness(1.04);
+}
+
+/* Brushed sheen on every panel — one catch-light, top edge. */
+[data-theme="mach"] .panel {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.03), transparent 38%);
+}
+
+/* Luxury includes stillness when asked for it. */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="mach"] body::before,
+  [data-theme="mach"] .streamline::after {
+    animation: none;
+  }
+}
+
+::selection {
+  background: rgb(var(--accent) / 0.25);
+}
+
+/* Theme switch — 250ms crossfade, applied only during the flip. */
+html.theme-fade,
+html.theme-fade *,
+html.theme-fade *::before,
+html.theme-fade *::after {
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease !important;
+}
+
+@layer components {
+  /*
+   * The surface language. One markup, three feels:
+   * pro/native read as bordered panels; v3 reads as floating cards.
+   */
+  .panel {
+    background-color: rgb(var(--ink-900));
+    border: 1px solid rgb(var(--ink-800));
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+  }
+  .panel-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Fields — soft inset surfaces, accent focus ring. */
+  .field {
+    width: 100%;
+    background-color: rgb(var(--ink-850));
+    border: 1px solid rgb(var(--field-border));
+    border-radius: var(--radius-ctl);
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: rgb(var(--fg));
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  }
+  .field::placeholder {
+    color: rgb(var(--fg-faint));
+  }
+  .field:focus {
+    border-color: rgb(var(--accent));
+    box-shadow: var(--ring-focus);
+    background-color: rgb(var(--ink-900));
+  }
+  .field-lg {
+    padding: 0.875rem 1rem;
+    font-size: 1rem;
+  }
+
+  /* Labels — mono-caps in pro/native; soft Inter Medium in v3. */
+  .label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgb(var(--fg-subtle));
+  }
+  [data-theme="v3"] .label {
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: rgb(var(--fg-muted));
+  }
+
+  /* Section headers — soft everywhere: title + quiet description. */
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: rgb(var(--fg));
+  }
+  .section-desc {
+    font-size: 12.5px;
+    color: rgb(var(--fg-subtle));
+    margin-top: 1px;
+  }
+
+  /* Brand kicker — the mono voice, kept for brand moments only. */
+  .kicker {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgb(var(--accent-soft));
+  }
+
+  /* Buttons — primary filled, secondary surfaced, ghost quiet. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-ctl);
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.625rem 1rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease,
+      color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease,
+      filter 0.15s ease;
+    user-select: none;
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background-color: rgb(var(--accent));
+    color: rgb(var(--ink-950));
+    box-shadow: 0 1px 2px rgb(var(--accent) / 0.35);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background-color: rgb(var(--accent-soft));
+  }
+  [data-theme="native"] .btn-primary:hover:not(:disabled) {
+    /* native's soft accent is lighter, not darker — brighten instead */
+    background-color: rgb(var(--accent));
+    filter: brightness(1.12);
+  }
+  .btn-secondary {
+    background-color: rgb(var(--ink-900));
+    border: 1px solid rgb(var(--ink-700));
+    color: rgb(var(--fg));
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background-color: rgb(var(--ink-850));
+    border-color: rgb(var(--fg-faint));
+  }
+  .btn-ghost {
+    color: rgb(var(--fg-muted));
+  }
+  .btn-ghost:hover:not(:disabled) {
+    color: rgb(var(--fg));
+    background-color: rgb(var(--ink-850));
+  }
+  .btn-accent-ghost {
+    border: 1px solid rgb(var(--accent) / 0.5);
+    color: rgb(var(--accent-soft));
+  }
+  .btn-accent-ghost:hover:not(:disabled) {
+    background-color: rgb(var(--accent) / 0.1);
+  }
+
+  /* Icon buttons — quiet 32px squares for card controls. */
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 10px;
+    color: rgb(var(--fg-subtle));
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+  .icon-btn:hover:not(:disabled) {
+    color: rgb(var(--fg));
+    background-color: rgb(var(--ink-850));
+  }
+  .icon-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .icon-btn-danger:hover:not(:disabled) {
+    color: #dc2626;
+    background-color: rgb(220 38 38 / 0.08);
+  }
+
+  /* Drag-to-reorder — the grip owns the gesture. touch-action: none is
+     scoped HERE (not the list), so the page still scrolls from anywhere
+     else on a phone; only a finger ON the grip starts a drag. */
+  .drag-grip {
+    touch-action: none;
+    cursor: grab;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .drag-grip:active {
+    cursor: grabbing;
+    color: rgb(var(--accent-soft));
+  }
+  /* The upgrade modal shell — the dopamine kit, app-side. An animated
+     conic ring around the panel with a blurred bleed; the invitation
+     should FEEL like the unlock. Frozen under reduced-motion. */
+  @property --upang { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+  @keyframes upspin { to { --upang: 360deg; } }
+  .upgrade-ring { position: relative; border-radius: 20px; padding: 2px; }
+  .upgrade-ring::before, .upgrade-ring::after {
+    content: ""; position: absolute; inset: 0; border-radius: 20px; z-index: -1;
+    background: conic-gradient(from var(--upang), #00c2ff, #3a7dff, #7a5cff, #b26cff, #00c2ff);
+    animation: upspin 5s linear infinite;
+  }
+  .upgrade-ring::after { filter: blur(18px); opacity: 0.5; inset: -3px; }
+  @media (prefers-reduced-motion: reduce) {
+    .upgrade-ring::before, .upgrade-ring::after { animation: none; }
+  }
+
+  /* The premium BADGE — the post-upgrade nav state. Solid brand-ramp
+     fill (same stops as the modal ring, so the visual language reads
+     as one continuous idea: outline invites, fill confirms), a soft
+     ambient glow instead of a static flat chip, subtle lift on hover.
+     This is the "actually feel premium" answer — never the same pixel
+     as the pre-upgrade ghost chip it replaces. */
+  @keyframes premium-glow {
+    0%, 100% { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 4px 14px -4px rgb(122 92 255 / 0.55); }
+    50%      { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 4px 18px -2px rgb(122 92 255 / 0.8); }
+  }
+  .premium-badge {
+    background: linear-gradient(135deg, #00c2ff, #3a7dff 45%, #7a5cff 75%, #b26cff);
+    color: #fff;
+    animation: premium-glow 3.5s ease-in-out infinite;
+    transition: transform 0.15s ease;
+  }
+  .premium-badge:hover { transform: translateY(-1px); }
+  .premium-badge:active { transform: translateY(0) scale(0.97); }
+  @media (prefers-reduced-motion: reduce) {
+    .premium-badge { animation: none; }
+  }
+
+  /* Themed scrollbar for the modal's scroll container — a thin accent
+     rail instead of the OS-default gray chrome, in every engine. */
+  .modal-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--accent) / 0.4) transparent;
+  }
+  .modal-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .modal-scroll::-webkit-scrollbar-track { background: transparent; }
+  .modal-scroll::-webkit-scrollbar-thumb {
+    background: rgb(var(--accent) / 0.35);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .modal-scroll::-webkit-scrollbar-thumb:hover { background: rgb(var(--accent) / 0.6); }
+
+  /* The lifted card — riding the pointer above its siblings. */
+  .drag-lift {
+    box-shadow: 0 4px 10px rgb(0 0 0 / 0.1), 0 22px 44px -12px rgb(0 0 0 / 0.4);
+    border-color: rgb(var(--accent) / 0.45);
+  }
+
+  /* Status chip */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 999px;
+    border: 1px solid rgb(var(--ink-800));
+    padding: 0.25rem 0.625rem;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /*
+   * The floating device — the preview is the hero. Glass frame,
+   * dark bezel, deep soft shadow (per-theme via --shadow-pop).
+   */
+  .device {
+    position: relative;
+    border-radius: 44px;
+    padding: 10px;
+    background: linear-gradient(165deg, rgb(var(--ink-900)), rgb(var(--ink-850)));
+    border: 1px solid rgb(var(--ink-800));
+    box-shadow: var(--shadow-pop);
+  }
+  .device-screen {
+    position: relative;
+    border-radius: 34px;
+    background: #0b0f19;
+    padding: 7px;
+    overflow: hidden;
+  }
+  .device-screen iframe {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 27px;
+    background: #0b0f19;
+  }
+  .device-notch {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 88px;
+    height: 18px;
+    border-radius: 999px;
+    background: #0b0f19;
+    z-index: 2;
+    pointer-events: none;
+  }
+}
+
+/* ── Signed-in strip + welcome toast ─────────────────────────────────── */
+
+/* Horizontal stat scroll on small screens — content scrolls, chrome doesn't show. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* The welcome toast's entrance — a small drop-in, then it holds. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Homepage demo phone — the real renderer, framed ─────────────────── */
+.phone-frame {
+  width: 250px;
+  height: 520px;
+  border-radius: 36px;
+  border: 6px solid rgb(0 0 0 / 0.7);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.45);
+  background: #000;
+}
+.demo-iframe {
+  width: 390px;
+  height: 812px;
+  transform: scale(0.641);
+  transform-origin: top left;
+  border: 0;
+}

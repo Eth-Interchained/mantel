@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" data-theme="pro">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEDB Links — one handle, every surface</title>
+    <meta
+      name="description"
+      content="Your professional identity, owned like a wallet. Claim a handle and publish everywhere: profile page, business card, QR code, vCard. Self-hostable, versioned, tamper-evident — powered by the NEDB engine."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Restore persisted theme before first paint. The server injects
+         window.__LINKS_CONFIG__ (brand + default theme) when serving the
+         built shell, so each deployment boots with its own identity. -->
+    <script>
+      (function () {
+        try {
+          var cfg = window.__LINKS_CONFIG__ || {};
+          // MUST track THEME_ORDER in src/lib/theme.ts — this list is a
+          // pre-paint duplicate (it runs before any module loads), and
+          // a theme missing here silently falls back to pro.
+          var ok = { pro: 1, native: 1, v3: 1, mach: 1, kundli: 1 };
+          var t = localStorage.getItem("links-theme");
+          var def = ok[cfg.defaultTheme] ? cfg.defaultTheme : "pro";
+          document.documentElement.setAttribute(
+            "data-theme",
+            ok[t] ? t : def,
+          );
+          if (cfg.brandName && cfg.brandName !== "NEDB Links") {
+            document.title = document.title.replace("NEDB Links", cfg.brandName);
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
