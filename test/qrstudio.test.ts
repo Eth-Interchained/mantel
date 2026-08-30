@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import type { Server } from "node:http";
 
-process.env.NEDB_DB = `links_qr_${Date.now().toString(36)}`;
+process.env.NEDB_DATA_DIR = `./.tmp/mantel_qr_${Date.now().toString(36)}_test`;
 delete process.env.LINKS_ADMIN_TOKEN;
 delete process.env.STRIPE_SECRET_KEY;
 process.env.LINKS_FREE_PROFILE_LIMIT = "1"; // limits ON, no Stripe needed

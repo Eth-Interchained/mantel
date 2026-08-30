@@ -1,5 +1,5 @@
 /**
- * Monetization gate — live against a real nedbd.
+ * Monetization gate — live against the real embedded engine.
  *
  * Free tier: one profile. Second claim → 402. A supporter entitlement
  * (written the way the webhook writes it) unlocks unlimited. The holder
@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import type { Server } from "node:http";
 
-process.env.NEDB_DB = `links_billing_${Date.now().toString(36)}`;
+process.env.NEDB_DATA_DIR = `./.tmp/mantel_billing_${Date.now().toString(36)}_test`;
 delete process.env.LINKS_ADMIN_TOKEN;
 delete process.env.STRIPE_SECRET_KEY;
 process.env.LINKS_FREE_PROFILE_LIMIT = "1"; // activates limits without Stripe

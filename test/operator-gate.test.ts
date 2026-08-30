@@ -12,7 +12,7 @@ import { after, before, test } from "node:test";
 import type { Server } from "node:http";
 
 const ADMIN_TOKEN = "instance-key-for-gate-tests";
-process.env.NEDB_DB = `links_gate_${Date.now().toString(36)}`;
+process.env.NEDB_DATA_DIR = `./.tmp/mantel_gate_${Date.now().toString(36)}_test`;
 process.env.LINKS_AUTH_MODE = "email";
 process.env.LINKS_MAIL_TEST = "1";
 process.env.PUBLIC_ORIGIN = "http://links.test";

@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import type { Server } from "node:http";
 
-process.env.NEDB_DB = `links_uploads_${Date.now().toString(36)}`;
+process.env.NEDB_DATA_DIR = `./.tmp/mantel_uploads_${Date.now().toString(36)}_test`;
 process.env.LINKS_UPLOAD_TEST = "1";
 delete process.env.LINKS_ADMIN_TOKEN;
 

@@ -2,14 +2,14 @@
  * Auth suite — token-gated instance behavior.
  *
  * Runs in its own process (node --test per-file isolation) so it can set
- * LINKS_ADMIN_TOKEN before the config module loads. Requires nedbd.
+ * LINKS_ADMIN_TOKEN before the config module loads. Uses the embedded engine in a scratch data dir.
  */
 
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import type { Server } from "node:http";
 
-process.env.NEDB_DB = `links_auth_${Date.now().toString(36)}`;
+process.env.NEDB_DATA_DIR = `./.tmp/mantel_auth_${Date.now().toString(36)}_test`;
 process.env.LINKS_ADMIN_TOKEN = "test-token-xyz";
 
 const { createApp, ensureDatabase } = await import("../src/server/app");
@@ -19,7 +19,7 @@ let server: Server;
 let base: string;
 
 before(async () => {
-  assert.ok(await db.ping(), "nedbd required for auth tests");
+  assert.ok(await db.ping(), "embedded engine required for auth tests");
   await ensureDatabase();
   server = createApp().listen(0);
   const addr = server.address();
