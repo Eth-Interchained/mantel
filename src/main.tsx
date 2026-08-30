@@ -9,9 +9,9 @@ function NotFound(): React.ReactElement {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-6">
       <p className="font-mono text-sm text-accent-soft">404</p>
-      <h1 className="text-3xl font-bold">This handle isn&apos;t claimed yet</h1>
+      <h1 className="text-3xl font-bold">No such page</h1>
       <a href="/" className="text-accent-soft underline underline-offset-4">
-        Claim it on NEDB Links
+        Back to mantel
       </a>
     </div>
   );

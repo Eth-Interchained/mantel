@@ -6,7 +6,7 @@
   "description": "mantel \u2014 the hearthboard. npmjs for local models, but social: VRAM-honest fit data and provenance-chained public sentiment on embedded NEDB.",
   "license": "GPL-3.0-or-later",
   "scripts": {
-    "dev": "concurrently -n web,api -c cyan,magenta \"portal dev\" \"npm run dev:api\"",
+    "dev": "portal dev",
     "dev:web": "portal dev",
     "dev:api": "node dev-api.mjs",
     "build": "portal build",
@@ -16,27 +16,19 @@
     "audit": "portal audit",
     "guard": "portal guard",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test test/embedded.test.ts test/renderers.test.ts test/wallet.test.ts test/electrum.test.ts test/theme.test.ts test/aggregate.test.ts test/config.test.ts test/logolayout.test.ts test/background.test.ts test/dragreorder.test.ts test/markdown.test.ts test/directory.test.ts test/raffle.test.ts test/fonts.test.ts test/secretbox.test.ts test/cashfree.test.ts",
-    "test:api": "tsx --test test/api.test.ts test/auth.test.ts test/seedauth.test.ts test/billing.test.ts test/webhook.test.ts test/analytics.test.ts test/emailauth.test.ts test/grants.test.ts test/uploads.test.ts test/qrstudio.test.ts test/raffles.test.ts test/payments.test.ts test/purchases.test.ts test/bookings.test.ts test/cashfree-webhook.test.ts test/admin.test.ts test/upiqr.test.ts test/operator-gate.test.ts"
+    "test": "tsx --test test/embedded.test.ts test/fit.test.ts test/identity.test.ts test/identity-parity.test.ts test/nql.test.ts",
+    "test:api": "tsx --test test/api.test.ts test/ingest.test.ts"
   },
   "dependencies": {
-    "@bitcoinerlab/secp256k1": "^1.2.0",
     "@interchained/portal-react": "^0.1.2",
     "@noble/curves": "^2.2.0",
     "@noble/hashes": "^2.2.0",
-    "@scure/bip39": "^2.2.0",
-    "bip32": "^5.0.1",
     "cors": "^2.8.5",
-    "ecpair": "^3.0.1",
     "express": "^4.19.2",
-    "interchainedjs-lib": "github:ethgr0wth/interchainedjs-lib",
     "lucide-react": "^1.23.0",
     "nedb-engine": "^2.8.2",
-    "nodemailer": "^9.0.3",
-    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "stripe": "^22.3.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -47,7 +39,6 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^22.10.1",
-    "@types/nodemailer": "^8.0.1",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
