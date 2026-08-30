@@ -1,0 +1,73 @@
+[
+  {
+    "model": "qwen3:32b",
+    "name": "Qwen3 32B",
+    "license": "Apache-2.0",
+    "tags": ["chat", "reasoning", "tools", "multilingual"],
+    "hf": "https://huggingface.co/Qwen/Qwen3-32B",
+    "summary": "Alibaba's dense 32B Qwen3 — hybrid thinking modes, strong tool use and multilingual coverage."
+  },
+  { "model": "qwen3:14b" },
+  { "model": "qwen3:8b" },
+  {
+    "model": "deepseek-r1:32b",
+    "name": "DeepSeek R1 Distill 32B",
+    "license": "MIT",
+    "tags": ["reasoning", "coder"],
+    "hf": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
+    "summary": "R1 reasoning distilled onto a Qwen 32B base — long deliberate chains of thought on local iron."
+  },
+  { "model": "deepseek-r1:14b" },
+  { "model": "deepseek-r1:8b" },
+  {
+    "model": "llama3.3:70b",
+    "name": "Llama 3.3 70B Instruct",
+    "license": "Llama-3.3",
+    "tags": ["chat", "reasoning"],
+    "hf": "https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct",
+    "summary": "Meta's 70B instruct — needs real iron; an A6000-class card handles Q4, consumer 24GB does not."
+  },
+  {
+    "model": "gemma3:27b",
+    "name": "Gemma 3 27B",
+    "license": "Gemma",
+    "tags": ["chat", "vision", "multilingual"],
+    "hf": "https://huggingface.co/google/gemma-3-27b-it",
+    "summary": "Google's largest Gemma 3 — multimodal, 128k context, strong for its weight class."
+  },
+  { "model": "gemma3:12b" },
+  { "model": "gemma3:4b" },
+  {
+    "model": "mistral-small3.2:24b",
+    "name": "Mistral Small 3.2 24B",
+    "license": "Apache-2.0",
+    "tags": ["chat", "tools", "vision"],
+    "hf": "https://huggingface.co/mistralai/Mistral-Small-3.2-24B-Instruct-2506",
+    "summary": "Mistral's 24B workhorse — fast, tool-capable, comfortable on a single 24GB card at Q4."
+  },
+  {
+    "model": "qwen2.5-coder:32b",
+    "name": "Qwen2.5 Coder 32B",
+    "license": "Apache-2.0",
+    "tags": ["coder"],
+    "hf": "https://huggingface.co/Qwen/Qwen2.5-Coder-32B-Instruct",
+    "summary": "The strongest open coder in its class for a long stretch — still the local default for many."
+  },
+  { "model": "qwen2.5-coder:14b" },
+  {
+    "model": "phi4:14b",
+    "name": "Phi-4 14B",
+    "license": "MIT",
+    "tags": ["chat", "reasoning"],
+    "hf": "https://huggingface.co/microsoft/phi-4",
+    "summary": "Microsoft's dense 14B — outsized reasoning for its parameter count, light enough for 12GB cards."
+  },
+  {
+    "model": "llama3.2:3b",
+    "name": "Llama 3.2 3B",
+    "license": "Llama-3.2",
+    "tags": ["chat", "edge"],
+    "hf": "https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct",
+    "summary": "Small enough for laptops and edge boxes; a sane default when VRAM is single-digit."
+  }
+]

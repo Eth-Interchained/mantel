@@ -16,8 +16,9 @@
     "audit": "portal audit",
     "guard": "portal guard",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test test/embedded.test.ts test/fit.test.ts test/identity.test.ts test/identity-parity.test.ts test/nql.test.ts",
-    "test:api": "tsx --test test/api.test.ts test/ingest.test.ts"
+    "test": "tsx --test test/embedded.test.ts test/fit.test.ts test/identity.test.ts test/identity-parity.test.ts test/nql.test.ts test/import.test.ts",
+    "test:api": "tsx --test test/api.test.ts test/ingest.test.ts",
+    "import:ollama": "node tools/import-ollama.mjs"
   },
   "dependencies": {
     "@interchained/portal-react": "^0.1.2",
