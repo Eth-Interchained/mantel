@@ -17,6 +17,7 @@ import { db } from "./db";
 import { fitAcrossProfiles, customProfile, fitModel, profileById, PROFILES } from "./fit";
 import { ingest } from "./ingest";
 import { getModel, models, signalsWire } from "./models";
+import { reviews } from "./reviews";
 
 export function createApp(): Express {
   const app = express();
@@ -82,6 +83,7 @@ export function createApp(): Express {
   app.use("/api/models", models);
   app.use("/api/signals", signalsWire);
   app.use("/api/ingest", ingest);
+  app.use("/api/reviews", reviews);
 
   // ── Fit: "will it run on my box?" ─────────────────────────────────────────
   app.get("/api/fit/:id", async (req: Request, res: Response) => {
