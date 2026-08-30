@@ -687,3 +687,13 @@ html.theme-fade *::after {
   transform-origin: top left;
   border: 0;
 }
+
+/* Signal wire: one frame fades in per rotation (SignalWire remounts on key). */
+@keyframes wire-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: none; }
+}
+.wire-frame { animation: wire-in 380ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .wire-frame { animation: none; }
+}

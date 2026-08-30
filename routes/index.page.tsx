@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import { listModels, type ModelRow } from "../src/lib/api";
 import { fitBadge, type ClientFitStatus } from "../src/lib/fitBadge";
+import { SignalWire } from "../src/lib/SignalWire";
 
 export const intent = {
   purpose:
@@ -136,6 +137,8 @@ export default function Home(): React.ReactElement {
           <span className="hidden font-mono text-xs text-zinc-600 sm:inline">the hearthboard</span>
         </div>
       </header>
+
+      <SignalWire />
 
       <main className="mx-auto max-w-5xl px-6">
         <section className="border-b border-zinc-800 py-12">

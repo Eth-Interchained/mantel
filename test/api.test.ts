@@ -170,6 +170,44 @@ test("an unknown fit profile is a 400 that lists the known ids", async () => {
   assert.ok(j.known.includes("rtx-3090"));
 });
 
+test("the wire returns the latest signals across all models, newest first", async () => {
+  // Seed three signals with distinct timestamps, two models, out of insert
+  // order — the wire must sort by postedAt DESC, not by write order.
+  const mk = (n: number, model: string, when: string) => ({
+    signal: {
+      modelRef: model,
+      source: "hn" as const,
+      sourceUrl: `https://news.ycombinator.com/item?id=wire${n}`,
+      excerpt: `wire probe ${n}`,
+      sentiment: "neutral" as const,
+      postedAt: when,
+    },
+    raw: { capturedAt: "2026-08-30T00:00:00.000Z", body: "b" },
+  });
+  const r = await fetch(`${base}/api/ingest/signals`, {
+    method: "POST",
+    headers: OPERATOR,
+    body: JSON.stringify({
+      signals: [
+        mk(1, "deepseek-r1:32b", "2026-08-10T00:00:00.000Z"),
+        mk(3, "wiretest:1b", "2026-08-29T00:00:00.000Z"),
+        mk(2, "deepseek-r1:32b", "2026-08-20T00:00:00.000Z"),
+      ],
+    }),
+  });
+  assert.equal(r.status, 201);
+
+  const w = await fetch(`${base}/api/signals/latest?limit=3`);
+  const j = (await w.json()) as { signals: { excerpt: string; postedAt: string }[]; count: number };
+  assert.equal(w.status, 200);
+  assert.equal(j.count, 3);
+  assert.deepEqual(
+    j.signals.map((x) => x.excerpt),
+    ["wire probe 3", "wire probe 2", "wire probe 1"],
+    "newest first by postedAt, across models, regardless of insert order",
+  );
+});
+
 test("an unknown API path is a JSON 404, not the SPA shell", async () => {
   const r = await fetch(`${base}/api/does-not-exist`);
   assert.equal(r.status, 404);

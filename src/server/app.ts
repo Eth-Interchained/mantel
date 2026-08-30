@@ -16,7 +16,7 @@ import { config } from "./config";
 import { db } from "./db";
 import { fitAcrossProfiles, customProfile, fitModel, profileById, PROFILES } from "./fit";
 import { ingest } from "./ingest";
-import { getModel, models } from "./models";
+import { getModel, models, signalsWire } from "./models";
 
 export function createApp(): Express {
   const app = express();
@@ -80,6 +80,7 @@ export function createApp(): Express {
 
   // ── Domain ────────────────────────────────────────────────────────────────
   app.use("/api/models", models);
+  app.use("/api/signals", signalsWire);
   app.use("/api/ingest", ingest);
 
   // ── Fit: "will it run on my box?" ─────────────────────────────────────────
