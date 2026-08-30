@@ -105,3 +105,34 @@ export function getFit(id: string): Promise<{ id: string; fits: ModelFit[] }> {
 export function getFitFor(id: string, profile: string): Promise<{ id: string; fit: ModelFit }> {
   return get(`/api/fit/${encodeURIComponent(id)}/${encodeURIComponent(profile)}`);
 }
+
+export interface FeedDef {
+  id: string;
+  label: string;
+  tag: string;
+  vramGib: number;
+  blurb: string;
+}
+
+export interface RankedRow {
+  id: string;
+  name: string;
+  params?: string;
+  fitStatus: "fits" | "tight" | "too-big" | "unknown";
+  fitQuant: string | null;
+  signalCount: number;
+  score: number;
+  sentiment: Record<string, number>;
+}
+
+export function listFeeds(): Promise<{ feeds: FeedDef[] }> {
+  return get("/api/feeds");
+}
+
+export function getFeed(
+  id: string,
+  vram?: number,
+): Promise<{ feed: FeedDef; ranked: RankedRow[]; excludedUnmeasured: number }> {
+  const q = vram ? `?vram=${encodeURIComponent(vram)}` : "";
+  return get(`/api/feeds/${encodeURIComponent(id)}${q}`);
+}

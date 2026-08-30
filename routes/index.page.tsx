@@ -135,6 +135,9 @@ export default function Home(): React.ReactElement {
           <span className="font-mono text-lg text-amber-500">▚</span>
           <span className="font-mono text-lg tracking-tight">mantel</span>
           <span className="hidden font-mono text-xs text-zinc-600 sm:inline">the hearthboard</span>
+          <a href="/feeds" className="ml-auto font-mono text-xs text-cyan-500 hover:underline">
+            ranked feeds →
+          </a>
         </div>
       </header>
 
