@@ -8,6 +8,7 @@ import {
   type SignalRow,
 } from "../../src/lib/api";
 import { ReviewComposer } from "../../src/lib/ReviewComposer";
+import { SentimentTimeline } from "../../src/lib/SentimentTimeline";
 
 export const intent = {
   purpose:
@@ -289,6 +290,8 @@ export default function ModelPage(): React.ReactElement {
                 ))}
               </div>
             ) : null}
+
+            {total > 0 ? <SentimentTimeline modelRef={model._id} /> : null}
 
             <div className="mt-4">
               <ReviewComposer

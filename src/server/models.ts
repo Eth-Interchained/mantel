@@ -170,6 +170,76 @@ export async function sentimentTally(
   return tally;
 }
 
+export interface TimelineBucket {
+  /** Month key, "YYYY-MM". */
+  period: string;
+  positive: number;
+  negative: number;
+  mixed: number;
+  neutral: number;
+  total: number;
+}
+
+/**
+ * Sentiment over time for one model — the shareable curve.
+ *
+ * Buckets signals by the MONTH THEY WERE POSTED (postedAt, not capture time),
+ * so the curve reflects when the community actually reacted. Bucketing is done
+ * in JS after an ordered pull, deliberately: NQL GROUP BY groups by a stored
+ * field value, and there is no stored month field to group on — deriving one
+ * at write time would denormalize the same fact twice and risk drift. At these
+ * volumes an ordered scan + tally is honest and fast; if signal counts ever
+ * make this heavy, the right fix is a materialized month field written ONCE at
+ * ingest, not a clever query.
+ *
+ * Every bucket is reconstructable: the same WHERE + postedAt range that
+ * produced a bar returns exactly the signals behind it, so a point on the
+ * curve is auditable, not asserted.
+ */
+export async function sentimentTimeline(
+  modelRef: string,
+  limit = 1000,
+): Promise<TimelineBucket[]> {
+  const rows = (await db.query(
+    `FROM ${COLLECTIONS.signals} WHERE modelRef = ${nqlString(modelRef)} ` +
+      `ORDER BY postedAt LIMIT ${clampLimit(limit)}`,
+  )) as Record<string, unknown>[];
+
+  const buckets = new Map<string, TimelineBucket>();
+  for (const r of rows) {
+    const posted = typeof r.postedAt === "string" ? r.postedAt : null;
+    const sentiment = typeof r.sentiment === "string" ? r.sentiment : null;
+    // A signal without a usable date or sentiment cannot be placed on the
+    // curve — skip it loudly rather than dropping it into a bogus bucket.
+    if (!posted || posted.length < 7 || !sentiment) {
+      console.warn(
+        `[mantel] timeline skipping a signal for ${modelRef} with no usable ` +
+          `postedAt/sentiment (id ${String(r._id)})`,
+      );
+      continue;
+    }
+    const period = posted.slice(0, 7); // YYYY-MM
+    let b = buckets.get(period);
+    if (!b) {
+      b = { period, positive: 0, negative: 0, mixed: 0, neutral: 0, total: 0 };
+      buckets.set(period, b);
+    }
+    if (sentiment === "positive") b.positive++;
+    else if (sentiment === "negative") b.negative++;
+    else if (sentiment === "mixed") b.mixed++;
+    else if (sentiment === "neutral") b.neutral++;
+    else {
+      // An unknown sentiment value still counts toward total (it is real
+      // evidence) but has no bar segment; log so a new enum value is noticed.
+      console.warn(`[mantel] timeline: unknown sentiment "${sentiment}" for ${modelRef}`);
+    }
+    b.total++;
+  }
+
+  // Chronological order for the chart's x-axis.
+  return [...buckets.values()].sort((a, b) => a.period.localeCompare(b.period));
+}
+
 /** The provenance chain behind one signal — the receipt for a claim. */
 export async function traceSignal(signalId: string): Promise<Record<string, unknown>[]> {
   return (await db.query(
@@ -322,6 +392,17 @@ models.get("/:id/signals", async (req: Request, res: Response) => {
   const limit = req.query.limit === undefined ? 100 : Number(req.query.limit);
   const rows = await signalsFor(req.params.id, limit);
   res.json({ signals: rows, count: rows.length });
+});
+
+/** Sentiment over time — the shareable curve, one bar per month. */
+models.get("/:id/timeline", async (req: Request, res: Response) => {
+  const model = await getModel(req.params.id);
+  if (!model) {
+    res.status(404).json({ error: "unknown model", id: req.params.id });
+    return;
+  }
+  const timeline = await sentimentTimeline(req.params.id);
+  res.json({ id: req.params.id, timeline });
 });
 
 /** The receipt: walk a claim back to its source document. */
