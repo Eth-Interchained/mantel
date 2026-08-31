@@ -136,3 +136,16 @@ export function getFeed(
   const q = vram ? `?vram=${encodeURIComponent(vram)}` : "";
   return get(`/api/feeds/${encodeURIComponent(id)}${q}`);
 }
+
+export interface TimelineBucket {
+  period: string;
+  positive: number;
+  negative: number;
+  mixed: number;
+  neutral: number;
+  total: number;
+}
+
+export function getTimeline(id: string): Promise<{ id: string; timeline: TimelineBucket[] }> {
+  return get(`/api/models/${encodeURIComponent(id)}/timeline`);
+}
