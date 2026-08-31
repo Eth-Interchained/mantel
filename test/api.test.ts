@@ -208,6 +208,24 @@ test("the wire returns the latest signals across all models, newest first", asyn
   );
 });
 
+test("stats reports real counts and the live verify verdict", async () => {
+  const r = await fetch(`${base}/api/stats`);
+  const j = (await r.json()) as {
+    models: number;
+    signals: number;
+    seq: number;
+    head: string;
+    verified: boolean;
+    engine: string;
+  };
+  assert.equal(r.status, 200);
+  assert.ok(j.models >= 1, "counts the seeded model");
+  assert.ok(j.signals >= 1, "counts the wire-test signals");
+  assert.equal(j.verified, true);
+  assert.equal(j.engine, "embedded-v2-dag");
+  assert.equal(typeof j.seq, "number");
+});
+
 test("an unknown API path is a JSON 404, not the SPA shell", async () => {
   const r = await fetch(`${base}/api/does-not-exist`);
   assert.equal(r.status, 404);

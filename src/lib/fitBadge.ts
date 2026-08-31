@@ -53,6 +53,8 @@ export function fitBadge(
   ).length;
 
   if (vramGib === null) {
+    // No VRAM entered: show a real fact (the weights range) instead of an
+    // "unmeasured" placeholder that reads as a broken site.
     return {
       status: "unknown",
       quant: null,

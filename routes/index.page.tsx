@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-import { listModels, type ModelRow } from "../src/lib/api";
+import { getStats, listModels, type ModelRow, type SiteStats } from "../src/lib/api";
 import { fitBadge, type ClientFitStatus } from "../src/lib/fitBadge";
 import { SignalWire } from "../src/lib/SignalWire";
+import { VerifyFooter } from "../src/lib/VerifyFooter";
 
 export const intent = {
   purpose:
@@ -50,8 +51,26 @@ function VramInput({
   );
 }
 
+/** Weights range across quants — a real fact for the badge slot when no VRAM
+ *  is entered, instead of an "unmeasured" placeholder. */
+function weightsRange(quants: ModelRow["quants"]): string | null {
+  const sizes = (quants ?? []).map((q) => q.fileGib).filter((n) => typeof n === "number");
+  if (sizes.length === 0) return null;
+  const lo = Math.min(...sizes);
+  const hi = Math.max(...sizes);
+  const f = (n: number) => (n >= 10 ? Math.round(n) : Number(n.toFixed(1)));
+  return sizes.length === 1 ? `${f(lo)} GiB` : `${f(lo)}–${f(hi)} GiB`;
+}
+
 function ModelCard({ model, vram }: { model: ModelRow; vram: number | null }): React.ReactElement {
-  const badge = fitBadge(model.quants ?? [], vram);
+  const quants = model.quants ?? [];
+  const badge = fitBadge(quants, vram);
+  const range = weightsRange(quants);
+  const ctx =
+    typeof model.contextNative === "number" && model.contextNative >= 1024
+      ? `${Math.round(model.contextNative / 1024)}k ctx`
+      : null;
+
   return (
     <li className="border-b border-zinc-800 py-5 last:border-0">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -62,14 +81,24 @@ function ModelCard({ model, vram }: { model: ModelRow; vram: number | null }): R
           {model._id}
         </a>
         {model.params ? <span className="font-mono text-xs text-zinc-500">{model.params}</span> : null}
+        {model.arch ? <span className="font-mono text-xs text-zinc-600">{model.arch}</span> : null}
         {model.license ? <span className="font-mono text-xs text-zinc-600">{model.license}</span> : null}
-        <span
-          className={`ml-auto rounded px-2 py-0.5 font-mono text-xs ${badge.className}`}
-          title={badge.title}
-        >
-          {STATUS_COPY[badge.status]}
-          {badge.quant ? ` · ${badge.quant}` : ""}
-        </span>
+        {vram !== null ? (
+          <span
+            className={`ml-auto rounded px-2 py-0.5 font-mono text-xs ${badge.className}`}
+            title={badge.title}
+          >
+            {STATUS_COPY[badge.status]}
+            {badge.quant ? ` · ${badge.quant}` : ""}
+          </span>
+        ) : range ? (
+          <span
+            className="ml-auto rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 font-mono text-xs text-zinc-400"
+            title="On-disk weight range across quants. Enter your VRAM for fit verdicts."
+          >
+            {range} · {quants.length} quant{quants.length === 1 ? "" : "s"}
+          </span>
+        ) : null}
       </div>
 
       {model.summary ? (
@@ -85,9 +114,10 @@ function ModelCard({ model, vram }: { model: ModelRow; vram: number | null }): R
             {t}
           </span>
         ))}
-        {badge.unmeasured > 0 ? (
-          <span className="font-mono text-[11px] text-amber-600/80">
-            {badge.unmeasured} quant{badge.unmeasured === 1 ? "" : "s"} unmeasured
+        {ctx ? <span className="font-mono text-[11px] text-zinc-600">{ctx}</span> : null}
+        {vram !== null && badge.status === "unknown" && quants.length > 0 ? (
+          <span className="font-mono text-[11px] text-zinc-600" title={badge.title}>
+            no measured VRAM data yet
           </span>
         ) : null}
       </div>
@@ -100,9 +130,20 @@ export default function Home(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [vram, setVram] = useState<number | null>(null);
+  const [stats, setStats] = useState<SiteStats | null>(null);
 
   useEffect(() => {
     let alive = true;
+    getStats()
+      .then((st) => {
+        if (alive) setStats(st);
+      })
+      .catch((err: unknown) => {
+        // Stats are hero decoration — log and render without them.
+        console.warn(
+          `[mantel] stats fetch failed (${err instanceof Error ? err.message : String(err)})`,
+        );
+      });
     listModels()
       .then((r) => {
         if (alive) setModels(r.models);
@@ -154,6 +195,25 @@ export default function Home(): React.ReactElement {
             No signup. No estimates dressed up as facts.
           </p>
 
+          {stats && stats.error === undefined && typeof stats.models === "number" ? (
+            <div className="mt-6 flex flex-wrap gap-x-8 gap-y-2 font-mono text-sm">
+              <span>
+                <span className="text-2xl text-zinc-100">{stats.models}</span>
+                <span className="ml-2 text-xs text-zinc-500">models tracked</span>
+              </span>
+              <span>
+                <span className="text-2xl text-zinc-100">{stats.signals}</span>
+                <span className="ml-2 text-xs text-zinc-500">sourced signals</span>
+              </span>
+              <span>
+                <span className="text-2xl text-emerald-400">{stats.verified ? "✓" : "✗"}</span>
+                <span className="ml-2 text-xs text-zinc-500">
+                  tamper-evident · seq {stats.seq}
+                </span>
+              </span>
+            </div>
+          ) : null}
+
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
             <input
               value={q}
@@ -201,15 +261,7 @@ export default function Home(): React.ReactElement {
         </section>
       </main>
 
-      <footer className="border-t border-zinc-800 py-8">
-        <div className="mx-auto max-w-5xl px-6 font-mono text-xs leading-relaxed text-zinc-600">
-          <p>
-            mantel stores every signal with a link to its source. Claims are auditable, not
-            asserted.
-          </p>
-          <p className="mt-1">© INTERCHAINED LLC · GPLv3</p>
-        </div>
-      </footer>
+      <VerifyFooter />
     </div>
   );
 }
