@@ -80,6 +80,30 @@ export function createApp(): Express {
     res.json({ brandName: config.brandName, profiles: PROFILES });
   });
 
+  // ── Stats — real numbers for the homepage hero and the verify footer ─────
+  app.get("/api/stats", async (_req, res) => {
+    try {
+      const [modelRows, signalRows, h] = await Promise.all([
+        db.query("FROM models LIMIT 1000"),
+        db.query("FROM signals LIMIT 1000"),
+        db.health(),
+      ]);
+      res.json({
+        models: modelRows.length,
+        signals: signalRows.length,
+        seq: h.seq,
+        head: h.head,
+        verified: (await db.verify()).ok,
+        engine: h.engine,
+        version: h.version,
+      });
+    } catch (err) {
+      // Stats are decoration; a failure here must not read as a dead site.
+      // 200 with ok:false so the client can render nothing, plus the cause.
+      res.json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
   // ── Domain ────────────────────────────────────────────────────────────────
   app.use("/api/models", models);
   app.use("/api/signals", signalsWire);

@@ -149,3 +149,19 @@ export interface TimelineBucket {
 export function getTimeline(id: string): Promise<{ id: string; timeline: TimelineBucket[] }> {
   return get(`/api/models/${encodeURIComponent(id)}/timeline`);
 }
+
+export interface SiteStats {
+  models?: number;
+  signals?: number;
+  seq?: number;
+  head?: string;
+  verified?: boolean;
+  engine?: string;
+  version?: string;
+  ok?: boolean;
+  error?: string;
+}
+
+export function getStats(): Promise<SiteStats> {
+  return get("/api/stats");
+}

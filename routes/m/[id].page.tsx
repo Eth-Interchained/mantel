@@ -9,6 +9,7 @@ import {
 } from "../../src/lib/api";
 import { ReviewComposer } from "../../src/lib/ReviewComposer";
 import { SentimentTimeline } from "../../src/lib/SentimentTimeline";
+import { VerifyFooter } from "../../src/lib/VerifyFooter";
 
 export const intent = {
   purpose:
@@ -75,6 +76,32 @@ function PullBox({ pull }: { pull: string }): React.ReactElement {
 }
 
 function FitTable({ fits }: { fits: ModelFit[] }): React.ReactElement {
+  // When NOTHING is measured, six per-profile tables all say the same thing.
+  // Collapse to ONE weights ladder (real information: quant x on-disk size)
+  // with a single honest note, instead of repeating "unmeasured" per card.
+  const anyMeasured = fits.some((f) => f.quants.some((q) => q.minVramGib !== null));
+  const ladder = fits[0]?.quants ?? [];
+
+  if (!anyMeasured) {
+    return (
+      <div>
+        <ul className="space-y-1">
+          {ladder.map((q) => (
+            <li key={q.quant} className="flex items-baseline gap-2 font-mono text-[11px]">
+              <span className="w-24 shrink-0 text-zinc-400">{q.quant}</span>
+              <span className="text-zinc-500">{q.fileGib} GiB on disk</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 border-l-2 border-zinc-800 pl-2 font-mono text-[11px] leading-relaxed text-zinc-600">
+          VRAM requirements for this model haven&apos;t been measured yet — sizes above are
+          weights on disk, which understate what actually loads. Fit verdicts appear here the
+          moment measured figures land.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {fits.map((f) => (
@@ -99,8 +126,7 @@ function FitTable({ fits }: { fits: ModelFit[] }): React.ReactElement {
           </ul>
           {f.unmeasured > 0 ? (
             <p className="mt-1.5 font-mono text-[11px] text-amber-600/80">
-              {f.unmeasured} quant{f.unmeasured === 1 ? "" : "s"} have no measured VRAM figure —
-              file size is not a substitute
+              {f.unmeasured} quant{f.unmeasured === 1 ? "" : "s"} unmeasured
             </p>
           ) : null}
         </div>
@@ -384,6 +410,7 @@ export default function ModelPage(): React.ReactElement {
           ) : null}
         </aside>
       </main>
+      <VerifyFooter />
     </div>
   );
 }

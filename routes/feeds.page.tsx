@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 import { getFeed, listFeeds, type FeedDef, type RankedRow } from "../src/lib/api";
+import { VerifyFooter } from "../src/lib/VerifyFooter";
 
 export const intent = {
   purpose:
@@ -164,6 +165,7 @@ export default function Feeds(): React.ReactElement {
           ) : null}
         </section>
       </main>
+      <VerifyFooter />
     </div>
   );
 }
