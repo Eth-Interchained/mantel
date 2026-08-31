@@ -110,16 +110,33 @@ export async function listModels(limit = 200): Promise<Record<string, unknown>[]
   return rows;
 }
 
-/** Signals for one model, newest first. */
+/** Signals for one model, newest first.
+ *
+ *  ORDER BY … DESC is real engine grammar (probed: s5,s4 back from a 5-row
+ *  ascending seed). It matters here: `ORDER BY x LIMIT n` + reverse() would
+ *  truncate to the OLDEST n and then flip them — newest-first of the wrong
+ *  subset. DESC makes the engine truncate from the right end. */
 export async function signalsFor(
   modelRef: string,
   limit = 100,
 ): Promise<Record<string, unknown>[]> {
-  const rows = (await db.query(
+  return (await db.query(
     `FROM ${COLLECTIONS.signals} WHERE modelRef = ${nqlString(modelRef)} ` +
-      `ORDER BY postedAt LIMIT ${clampLimit(limit)}`,
+      `ORDER BY postedAt DESC LIMIT ${clampLimit(limit)}`,
   )) as Record<string, unknown>[];
-  return rows.reverse();
+}
+
+/**
+ * The latest signals across ALL models, newest first — the homepage wire.
+ *
+ * Ordered by ORDER BY postedAt (the post's own timestamp, not our capture
+ * time): the wire shows when people actually said things, so a backfilled
+ * old post lands in its historical place instead of masquerading as news.
+ */
+export async function latestSignals(limit = 30): Promise<Record<string, unknown>[]> {
+  return (await db.query(
+    `FROM ${COLLECTIONS.signals} ORDER BY postedAt DESC LIMIT ${clampLimit(limit)}`,
+  )) as Record<string, unknown>[];
 }
 
 /**
@@ -274,6 +291,15 @@ export function clampLimit(limit: number): number {
 // ── Routes ──────────────────────────────────────────────────────────────────
 
 export const models = Router();
+
+/** The wire: latest signals across every model, for the homepage ticker. */
+export const signalsWire = Router();
+
+signalsWire.get("/latest", async (req: Request, res: Response) => {
+  const limit = req.query.limit === undefined ? 30 : Number(req.query.limit);
+  const rows = await latestSignals(limit);
+  res.json({ signals: rows, count: rows.length });
+});
 
 models.get("/", async (req: Request, res: Response) => {
   const limit = req.query.limit === undefined ? 200 : Number(req.query.limit);
