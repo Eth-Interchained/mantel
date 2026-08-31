@@ -1,11 +1,12 @@
 /**
- * NEDB Links — Express server bootstrap.
+ * mantel — Express server bootstrap.
  *
- * NEDB stores knowledge. Portal renders experiences. Links publishes identity.
+ * NEDB stores knowledge. Portal renders experiences. mantel shows what your
+ * hearth can actually run.
  *
- * App assembly lives in src/server/app.ts (createApp) so tests can boot
- * the real app against a real nedbd. This file only loads env, ensures
- * the database, and listens.
+ * App assembly lives in src/server/app.ts (createApp) so tests can boot the
+ * real app against the real EMBEDDED engine. This file only loads env, opens
+ * the engine, and listens. There is no daemon to wait for.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -30,7 +31,7 @@ const { config, validateConfig } = await import("./src/server/config");
 {
   const problems = validateConfig(config);
   if (problems.length > 0) {
-    console.error("\x1b[31m[links] configuration is incomplete:\x1b[0m");
+    console.error("\x1b[31m[mantel] configuration is incomplete:\x1b[0m");
     for (const p of problems) console.error(`  - ${p}`);
     process.exit(1);
   }
@@ -38,17 +39,14 @@ const { config, validateConfig } = await import("./src/server/config");
 const { createApp, ensureDatabase } = await import("./src/server/app");
 const { warnIfOpen } = await import("./src/server/auth");
 
-// Ensure the database exists BEFORE the first write. Idempotent.
-// Works around a nedbd 2.6.1 interop bug found in Links' first smoke test:
-// on an unknown-db 404 the daemon responds without draining the request
-// body, so the client's auto-create retry on the same keep-alive socket
-// gets misparsed ("Bad request syntax"). Creating the db up front keeps
-// every write on the happy path. Proper fix lands engine-side.
+// Open the embedded engine BEFORE the first request. Throws (and exits
+// non-zero below) if the data dir is unusable — an embedded engine that
+// cannot open has no late-arrival story worth waiting for.
 await ensureDatabase();
 
 const server = createApp().listen(config.port, () => {
-  console.log(`\x1b[36m⬡ NEDB Links\x1b[0m listening on :${config.port}`);
-  console.log(`  nedbd → ${config.nedbUrl} (db: ${config.nedbDb})`);
+  console.log(`\x1b[36m⬡ mantel\x1b[0m listening on :${config.port}`);
+  console.log(`  embedded NEDB → ${config.nedbDataDir}`);
   warnIfOpen();
 });
 
@@ -57,7 +55,7 @@ const server = createApp().listen(config.port, () => {
 server.on("error", (err: NodeJS.ErrnoException) => {
   if (err.code === "EADDRINUSE") {
     console.error(
-      `\x1b[31m[links] port ${config.port} is already in use.\x1b[0m\n` +
+      `\x1b[31m[mantel] port ${config.port} is already in use.\x1b[0m\n` +
         `  Another process (the Vite dev client? a second links instance?) holds it.\n` +
         `  Fix: set LINKS_API_PORT to a free port in .env — the dev proxy follows\n` +
         `  the same variable automatically. (Generic PORT also works but is read\n` +

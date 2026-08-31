@@ -69,18 +69,32 @@ export function createApp(): Express {
 
   // ── Health — reports every dependency ────────────────────────────────────
   app.get("/api/health", async (_req, res) => {
-    let nedb: { ok: boolean; version?: string; error?: string } = { ok: false };
+    let nedb: {
+      ok: boolean;
+      version?: string;
+      engine?: string;
+      seq?: number;
+      head?: string;
+      verified?: boolean;
+      error?: string;
+    } = { ok: false };
     try {
       const h = await db.health();
-      nedb = { ok: h.ok, version: h.version };
+      nedb = {
+        ok: h.ok,
+        version: h.version,
+        engine: h.engine,
+        seq: h.seq,
+        head: h.head,
+        verified: (await db.verify()).ok,
+      };
     } catch (err) {
       nedb = { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
     res.json({
-      links: "ok",
+      mantel: "ok",
       nedb,
-      nedbUrl: config.nedbUrl,
-      db: config.nedbDb,
+      dataDir: config.nedbDataDir,
       authConfigured: Boolean(config.adminToken),
       aiassist: { configured: Boolean(config.aiassistApiKey) },
     });
@@ -210,14 +224,28 @@ export function createApp(): Express {
   return app;
 }
 
-/** Idempotent database bootstrap — see server.ts for the interop story. */
+/** Open the embedded engine before the first request. Idempotent.
+ *
+ *  FATAL on failure, unlike the daemon era where a warning made sense
+ *  (nedbd could come up late and the next request would succeed). Embedded
+ *  there is no second chance: if the engine cannot open, every route 500s
+ *  on its first query and the real cause gets buried request-side. Die
+ *  loud, name the dir, list what could actually be wrong. */
 export async function ensureDatabase(): Promise<void> {
   try {
     await db.createDatabase();
-    console.log(`\x1b[36m⬡\x1b[0m database ready: ${config.nedbDb}`);
+    const h = await db.health();
+    console.log(
+      `\x1b[36m⬡\x1b[0m embedded engine ready: ${config.nedbDataDir} ` +
+        `(nedb-engine ${h.version}, ${h.engine}, seq ${h.seq})`,
+    );
   } catch (err) {
-    console.warn(
-      `\x1b[33m[links] could not ensure database (${err instanceof Error ? err.message : err}) — is nedbd running at ${config.nedbUrl}?\x1b[0m`,
+    throw new Error(
+      `[mantel] embedded NEDB engine failed to open at "${config.nedbDataDir}": ` +
+        `${err instanceof Error ? err.message : String(err)}\n` +
+        `  Possible causes: the path is not writable; the data dir was written by an ` +
+        `incompatible engine version; or the nedb-engine native addon has no build ` +
+        `for this platform (check \`npm ls nedb-engine\`).`,
     );
   }
 }

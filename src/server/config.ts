@@ -39,12 +39,9 @@ export interface LinksConfig {
   mailFrom?: string;
   /** imgbb API key — enables avatar/logo uploads. Absent = URL-only. */
   imgbbKey?: string;
-  /** Running nedbd instance. All state lives there. */
-  nedbUrl: string;
-  /** Database name inside nedbd. */
-  nedbDb: string;
-  /** Bearer token for nedbd, when the daemon is token-gated. */
-  nedbToken?: string;
+  /** Data directory for the EMBEDDED NEDB engine (v2 DAG store). mantel
+   *  runs the engine in-process — there is no nedbd, no URL, no token. */
+  nedbDataDir: string;
   /** v0.1 single-owner auth: token gating the editor and every write. */
   adminToken?: string;
   /** Public origin for share URLs and QR payloads. */
@@ -114,9 +111,7 @@ export function loadConfig(): LinksConfig {
     smtpPass: process.env.SMTP_PASS || undefined,
     mailFrom: process.env.MAIL_FROM || undefined,
     imgbbKey: process.env.IMGBB_API_KEY || undefined,
-    nedbUrl: process.env.NEDB_URL || "http://127.0.0.1:7070",
-    nedbDb: process.env.NEDB_DB || "links",
-    nedbToken: process.env.NEDB_TOKEN || undefined,
+    nedbDataDir: process.env.NEDB_DATA_DIR || "./mantel-data",
     adminToken: process.env.LINKS_ADMIN_TOKEN || undefined,
     publicOrigin: process.env.PUBLIC_ORIGIN || undefined,
     aiassistBaseUrl: process.env.AIASSIST_BASE_URL || "https://api.aiassist.net",

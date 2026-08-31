@@ -1,5 +1,5 @@
 /**
- * Live API suite — the REAL app against a REAL nedbd.
+ * Live API suite — the REAL app against the REAL embedded engine.
  *
  * No mocks: these tests boot createApp() on an ephemeral port, point it
  * at a scratch database inside a running nedbd (NEDB_URL, default
@@ -15,7 +15,7 @@ import { after, before, test } from "node:test";
 import type { Server } from "node:http";
 
 // Scratch database per run — set BEFORE the app modules import config.
-process.env.NEDB_DB = `links_test_${Date.now().toString(36)}`;
+process.env.NEDB_DATA_DIR = `./.tmp/mantel_test_${Date.now().toString(36)}_test`;
 delete process.env.LINKS_ADMIN_TOKEN; // open mode; auth is covered in auth.test.ts
 
 // Deployment assets: point /assets at a scratch dir with a probe file.
@@ -63,7 +63,7 @@ before(async () => {
   const reachable = await db.ping();
   assert.ok(
     reachable,
-    `nedbd is not reachable at ${process.env.NEDB_URL ?? "http://127.0.0.1:7070"} — start it before running test:api`,
+    `embedded engine could not open at ${process.env.NEDB_DATA_DIR} — see the logged cause above`,
   );
   await ensureDatabase();
   server = createApp().listen(0);
@@ -86,9 +86,9 @@ let identityId = "";
 
 test("health reports the engine", async () => {
   const r = await fetch(`${base}/api/health`);
-  const j = (await r.json()) as { links: string; nedb: { ok: boolean; version?: string } };
+  const j = (await r.json()) as { mantel: string; nedb: { ok: boolean; version?: string } };
   assert.equal(r.status, 200);
-  assert.equal(j.links, "ok");
+  assert.equal(j.mantel, "ok");
   assert.equal(j.nedb.ok, true);
 });
 

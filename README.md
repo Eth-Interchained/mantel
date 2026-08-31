@@ -1,170 +1,97 @@
-# ⬡ NEDB Links
+# 🔥 mantel — the hearthboard
 
-> **NEDB stores knowledge. Portal renders experiences. Links publishes identity.**
+> **NEDB stores knowledge. Portal renders experiences. mantel shows what your hearth can actually run.**
 
-One handle. One identity. Every surface.
+npmjs for local models, but social.
 
-NEDB Links is an **identity publishing platform** — claim a handle, build a structured
-identity, and publish it everywhere: profile page, digital business card, QR code,
-vCard, JSON API. It looks like a better link-in-bio. Underneath, it's a modern identity
-platform backed by a database capable of provenance, time travel, and structured
-history — and every feature exists to prove it.
+Every model directory tells you a name and a file size. None of them answer the two
+questions you actually have:
+
+1. **Will this run on my box?**
+2. **Is it any good, according to real humans — and can I check?**
+
+mantel answers both, with receipts.
+
+## Three pillars
+
+**1. VRAM-honest fit data.** Quant × context × VRAM, per model, plus
+"fits on a 3090 / A6000 / 64GB Mac" badges. The fit math comes from hearth's admission
+planner — the same code that decides what actually loads on a real GPU, not a
+spec-sheet estimate.
+
+**2. Provenance-chained public sentiment.** Real posts from real people — X, Bluesky,
+r/LocalLLaMA, HN, HuggingFace discussions, GitHub issues. Every signal is stored with
+`caused_by` pointing at the source document, so any claim on any page can be walked
+back to the post it came from with a single `TRACE`. Reviews you can audit.
+
+**3. One boring ranked feed.** "Best coder under 20GB." "Best reasoner that fits 48GB."
+Transparent ranking, no social graph, no follows, no algorithm mystery.
+
+## Identity is math, not a row in our database
+
+There is no signup. You **derive** an identity:
 
 ```
-User ──owns──▶ Identity ──renders──▶ Profile page
-                                     Business card
-                                     QR payload
-                                     vCard
-                                     JSON API
-                                     …whatever you register next
+nickname + salt  ──BLAKE2b──▶  identity hash  ──▶  mark#a3f9c2  + deterministic identicon
 ```
 
-## The model, not the page
+Re-enter the same nickname and salt anywhere and you are you again. We store only the
+hash on your posts — no email, no password, no reset flow, no PII. Nothing to breach,
+nothing to leak. Lose the salt and that identity is gone; that is the trade, stated up
+front.
 
-The product is the **Identity Manifest** — a canonical, versioned document stored in
-[NEDB](https://github.com/Eth-Interchained/nedb). The webpage is only renderer #1.
+## The engine is embedded
 
-- **`identityId` is permanence.** Immutable, forever. History, provenance, backlinks,
-  and printed QR codes hang off it.
-- **Handles are branding.** Claim `marisayvettehair`, rename it later — the old handle
-  301-redirects to the new one. Nothing ever breaks.
-- **A user owns many identities.** Personal, business, brand, conference booth,
-  anonymous demo. Identity ≠ user.
-- **Blocks advertise capabilities** (`shareable`, `qr`, `printable`, `schedulable`, …)
-  so renderers reason about content generically instead of guessing.
+mantel runs **NEDB in-process** via the `nedb-engine` native addon (v2 DAG store).
+There is no `nedbd`, no port, no daemon to supervise:
 
-## Engine capability = product feature
+- `verify()`, NQL and `TRACE` are direct native calls inside the request handler
+- instant cold start — the v2 DAG store has no log to replay
+- one process owns the data directory (the engine takes an exclusive lock and refuses
+  split-brain opens), so **every write flows through this app** — including the
+  ingestion crawler, which posts to an authenticated route rather than touching the
+  files behind the app's back
+- writes are flushed on `SIGTERM`/`SIGINT`/exit by the addon's own hook
 
-The design principle of the whole Interchained ecosystem, demonstrated here in
-production:
-
-| NEDB primitive | Links feature |
-| --- | --- |
-| `AS OF seq` (MVCC time-travel) | Page history — view and restore any version of your identity |
-| `VALID AS OF "date"` (bi-temporal) | Scheduled publishing — stage tomorrow's page today |
-| `TRACE caused_by` (causal DAG) | Edit history — every change chained to its cause |
-| `caused_by` / `evidence` provenance | Trust — writes carry their reason |
-| Append-only hash-chained log | Restoration — nothing is ever truly lost |
-| `verify()` (BLAKE2b Merkle) | Tamper-evident identities |
-| Append-only events + NQL `GROUP BY` | Analytics — QR scans vs link taps in one query |
-
-All state lives in a running [`nedbd`](https://github.com/Eth-Interchained/nedb) and is
-accessed exclusively through
-[`nedb-engine-client`](https://github.com/Eth-Interchained/nedb/tree/master/client/node).
-There is no other database. There isn't even an ORM.
-
-## The Extension Promise
-
-> **If we can build it, you can build it.**
-
-Every built-in block, template, renderer, importer, exporter, and theme uses the exact
-same public APIs available to the community:
-
-```ts
-import { defineBlock, defineTemplate, defineRenderer } from "./src/lib/registry";
-
-// A custom block — validated, capability-aware, editor-ready:
-defineBlock({
-  type: "bandcamp",
-  name: "Bandcamp",
-  description: "Latest release with embedded player.",
-  capabilities: ["embeddable", "interactive"],
-  schema: z.object({ url: z.string().url() }),
-  defaults: () => ({ url: "https://" }),
-});
-
-// A custom surface — equal citizen with the profile page:
-defineRenderer({
-  id: "pdf",
-  name: "Printable PDF",
-  description: "The identity as a one-page printable.",
-  consumes: ["printable", "exportable"],
-  render: (manifest, ctx) => ({ contentType: "application/pdf", body: buildPdf(manifest) }),
-});
-```
-
-This promise never changes. There is no private back door.
-
-## Quickstart
+Configuration is one variable:
 
 ```bash
-# 1. A running NEDB daemon (all state lives here)
-pip install nedb-engine
-nedbd &
+NEDB_DATA_DIR=./mantel-data   # default
+```
 
-# 2. NEDB Links
+## Run it
+
+```bash
 npm install
-cp .env.example .env    # set LINKS_ADMIN_TOKEN before going public
-npm run dev             # Vite client :3000 + API :3001
+npm run dev            # Portal dev server + API
+npm run build && npm start
 ```
 
-Open `http://localhost:3000`, type a handle, claim, publish, share. That's the loop.
-Manage everything after that at `/identities` — every identity you own — and `/edit/:id`,
-the block editor with a live preview rendered by the exact renderer the public page uses.
-
-**Production:**
+The health check reports the engine honestly — version, seq, Merkle head, and a live
+tamper-evidence verdict:
 
 ```bash
-npm run build   # portal build → dist/
-npm run start   # serves editor + API + public profiles on PORT
+curl -s localhost:3001/api/health
+{"mantel":"ok","nedb":{"ok":true,"version":"2.8.2","engine":"embedded-v2-dag",
+ "seq":41,"head":"f5240f85…","verified":true},"dataDir":"./mantel-data"}
 ```
 
-One Node process + one nedbd. That's the entire deployment.
+## Tests
 
-## Surfaces
-
-Every published identity renders through the registry:
-
-| URL | Renderer |
-| --- | --- |
-| `/:handle` | Profile page (server-rendered, mobile-first, zero client JS) |
-| `/:handle?format=card` | Digital business card — screen-shareable, print-true at 3.5in × 2in |
-| `/:handle?format=qr` | Print-grade QR (SVG; `&type=png&size=…` for PNG, `&download=1` to save) |
-| `/:handle?format=vcard` | Importable contact (vCard 3.0, stable UID — re-downloads update, never duplicate) |
-| `/:handle?format=json` | The Identity Manifest as structured JSON |
-| `/go/:identityId/:blockId?to=…` | Click-tracked outbound redirect |
-
-Publishing yields the full share kit at once: share URL, downloadable QR (SVG + PNG),
-save-contact vCard, business card, and social preview tags. Every QR encodes `?src=qr`,
-so scans land as events distinct from taps — `FROM events WHERE kind = "profile_view"
-GROUP BY source COUNT` answers "salon counter vs Instagram bio" straight from the engine.
-
-More surfaces land through the same registry — track the
-[issues](../../issues) for the living backlog. No roadmap documents; shipped code and
-open issues only.
-
-## Testing
+No mocks. The suites boot the real app against the real embedded engine in a scratch
+data directory.
 
 ```bash
-npm test        # renderer suites — pure, no engine needed
-npm run test:api  # the REAL app against a REAL nedbd — boot nedbd first
+npm run typecheck
+npm test          # unit + the embedded-engine adapter suite
+npm run test:api  # live API suite
 ```
 
-CI boots an actual NEDB engine (`pip install nedb-engine`) and runs the live suite
-against it on every PR. No mocks — the engine is under test as much as the app.
+## Lineage
 
-## Architecture
+Forked from [nedb-links](https://github.com/Eth-Interchained/nedb-links), which supplied
+the Portal + Express + NEDB skeleton, the identity-manifest patterns, and the deploy rig.
+mantel replaces the daemon client with the embedded engine and repoints the product at
+local models.
 
-```
-routes/               Portal pages (the editor SPA — React)
-src/lib/identity.ts   The Identity Manifest — the canonical contract
-src/lib/registry.ts   defineBlock / defineTemplate / defineRenderer
-src/lib/blocks/       Built-in blocks (via the public API)
-src/lib/templates/    Built-in who-are-you templates (via the public API)
-src/lib/renderers/    Built-in renderers (via the public API)
-src/server/           Express: API routes, auth, public rendering
-server.ts             Bootstrap: API + public surfaces + editor SPA
-app.contract.ts       Portal contract (audience, goals, brand, SEO)
-```
-
-Viewers get small server-rendered HTML. The React app is for editing, never viewing.
-
-## License
-
-[GPL-3.0-or-later](LICENSE) — like
-[NEDB Studio](https://github.com/Eth-Interchained/nedb-studio).
-
----
-
-**© INTERCHAINED LLC × Claude Sonnet 4.6** — part of the
-[NEDB](https://github.com/Eth-Interchained/nedb) ecosystem.
+© INTERCHAINED LLC — GPLv3

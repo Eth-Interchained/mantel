@@ -15,8 +15,16 @@ pnpm run build          # → dist/ — one build works for every deployment
 pnpm start              # NODE_ENV=production, one process, done
 ```
 
-The process listens on `LINKS_API_PORT` (default 3001) and needs a
-running `nedbd` (`NEDB_URL`, default `http://127.0.0.1:7070`).
+The process listens on `LINKS_API_PORT` (default 3001). There is **no daemon
+to start** — mantel embeds the NEDB engine in-process and opens
+`NEDB_DATA_DIR` (default `./mantel-data`) at boot. If that directory is
+unusable the process dies immediately with the reason, rather than serving
+500s on every route.
+
+Because the engine takes an **exclusive lock** on its data directory, exactly
+one mantel process may own a given `NEDB_DATA_DIR`. Two processes on the same
+directory is not a supported topology — the second open is refused, by design
+(a split-brain open cannot see the other process's writes).
 
 ## Two storefronts from one repo
 
@@ -36,8 +44,7 @@ LINKS_AUTH_MODE=wallet
 LINKS_DEFAULT_THEME=mach
 LINKS_API_PORT=3001
 PUBLIC_ORIGIN=https://interchained.org
-NEDB_URL=http://127.0.0.1:7070
-NEDB_DB=links_interchained
+NEDB_DATA_DIR=/home/USER/apps/mantel/mantel-data
 # Stripe (live keys + this domain's webhook secret), IMGBB_API_KEY, …
 ```
 
@@ -49,8 +56,7 @@ LINKS_BRAND_NAME=ne-db
 LINKS_DEFAULT_THEME=v3
 LINKS_API_PORT=3002
 PUBLIC_ORIGIN=https://ne-db.com
-NEDB_URL=http://127.0.0.1:7070
-NEDB_DB=links_nedb
+NEDB_DATA_DIR=/home/USER/apps/mantel-alt/mantel-data
 SMTP_HOST=box.ne-db.com
 SMTP_PORT=587
 SMTP_SECURE=0
@@ -60,8 +66,9 @@ MAIL_FROM="ne-db <no-reply@ne-db.com>"
 # Stripe (live keys + this domain's webhook secret), IMGBB_API_KEY, …
 ```
 
-Separate `NEDB_DB` names keep the two products' data cleanly apart on
-one engine. Email mode **refuses to boot** without SMTP + PUBLIC_ORIGIN
+Separate `NEDB_DATA_DIR` paths keep two deployments' data cleanly apart —
+each process owns its own directory, and the engine's exclusive lock enforces
+that separation rather than trusting convention. Email mode **refuses to boot** without SMTP + PUBLIC_ORIGIN
 — that's on purpose; a dead mail path is a dead account system.
 
 ## Keeping it running
@@ -118,7 +125,10 @@ restarts are stateless and safe.
 
 ## Pre-launch checklist
 
-- [ ] `nedbd` data directory on a disk you back up (the engine IS the database)
+- [ ] `NEDB_DATA_DIR` on a disk you back up (the engine IS the database — back up the
+      directory, not a dump; `verify()` in `/api/health` tells you it is intact)
+- [ ] exactly ONE process per `NEDB_DATA_DIR` (the engine lock enforces it; plan
+      restarts as stop-then-start, never overlapping)
 - [ ] Stripe **live** keys + a live-mode webhook endpoint per domain (test/live secrets differ!)
 - [ ] `PUBLIC_ORIGIN` set on every deployment (checkout redirects, QR payloads, email links)
 - [ ] Email mode: send yourself a signup — verify the MIAB path end to end

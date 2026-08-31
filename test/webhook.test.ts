@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import type { Server } from "node:http";
 
-process.env.NEDB_DB = `links_webhook_${Date.now().toString(36)}`;
+process.env.NEDB_DATA_DIR = `./.tmp/mantel_webhook_${Date.now().toString(36)}_test`;
 delete process.env.LINKS_ADMIN_TOKEN;
 process.env.STRIPE_SECRET_KEY = "sk_test_offline_dummy";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_offline_secret";

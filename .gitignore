@@ -18,3 +18,7 @@ nedb-data/
 npm-debug.log*
 yarn-error.log*
 .DS_Store
+
+# embedded NEDB data + scratch test dirs
+mantel-data/
+.tmp/

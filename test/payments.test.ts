@@ -17,7 +17,7 @@ import { after, before, test } from "node:test";
 import { randomBytes } from "node:crypto";
 import type { Server } from "node:http";
 
-process.env.NEDB_DB = `links_pay_${Date.now().toString(36)}`;
+process.env.NEDB_DATA_DIR = `./.tmp/mantel_pay_${Date.now().toString(36)}_test`;
 process.env.LINKS_AUTH_MODE = "email";
 process.env.LINKS_MAIL_TEST = "1";
 process.env.PUBLIC_ORIGIN = "http://links.test";
