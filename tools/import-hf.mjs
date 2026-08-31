@@ -26,7 +26,7 @@ import { readFileSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildHfEntry, groupGgufsByQuant } from "./import-hf-lib.mjs";
+import { buildHfEntry, deriveIdFromRepo, groupGgufsByQuant, mapHfTags } from "./import-hf-lib.mjs";
 
 const HF = "https://huggingface.co";
 const MANTEL = process.env.MANTEL_URL || "http://127.0.0.1:3001";
@@ -41,7 +41,20 @@ if (!TOKEN) {
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
-const seedPath = resolve(process.argv[2] || join(here, "seed-hf.json"));
+
+// Args: [seed-file.json] [--discover N]
+const argv = process.argv.slice(2);
+const discoverIx = argv.indexOf("--discover");
+let discoverN = 0;
+if (discoverIx !== -1) {
+  discoverN = Number(argv[discoverIx + 1]);
+  if (!Number.isInteger(discoverN) || discoverN <= 0 || discoverN > 200) {
+    console.error(`[import-hf] --discover expects an integer 1-200, got "${argv[discoverIx + 1]}"`);
+    process.exit(1);
+  }
+  argv.splice(discoverIx, 2);
+}
+const seedPath = resolve(argv[0] || join(here, "seed-hf.json"));
 const seeds = JSON.parse(readFileSync(seedPath, "utf8"));
 
 const hfHeaders = process.env.HF_TOKEN ? { authorization: `Bearer ${process.env.HF_TOKEN}` } : {};
@@ -70,6 +83,37 @@ async function postModel(model) {
 
 let ok = 0;
 let failed = 0;
+let skippedGated = 0;
+
+// Discovery: top-N GGUF repos by downloads, appended after the curated seeds.
+// Curated rows win: a discovered repo already covered by a seed is skipped so
+// the hand-written id/tags/summary are not overwritten by derived ones.
+if (discoverN > 0) {
+  try {
+    const found = await getJson(
+      `${HF}/api/models?filter=gguf&sort=downloads&direction=-1&limit=${discoverN}`,
+      hfHeaders,
+    );
+    const curated = new Set(seeds.map((s) => s.repo));
+    let added = 0;
+    for (const m of Array.isArray(found) ? found : []) {
+      if (typeof m.id !== "string" || curated.has(m.id)) continue;
+      const id = deriveIdFromRepo(m.id);
+      if (!id) {
+        console.warn(`[import-hf] discover: cannot derive an id from "${m.id}" — skipping`);
+        continue;
+      }
+      seeds.push({ repo: m.id, id, tags: mapHfTags(m.tags), discovered: true });
+      added++;
+    }
+    console.log(`[import-hf] discover: ${added} repo(s) queued from the top ${discoverN} by downloads`);
+  } catch (err) {
+    // Discovery failing must not sink the curated run — but it is a failure,
+    // counted and fatal at exit like any other.
+    failed++;
+    console.error(`[import-hf] discover FAILED: ${err.message}`);
+  }
+}
 
 for (const seed of seeds) {
   if (!seed || typeof seed.repo !== "string" || typeof seed.id !== "string") {
@@ -88,8 +132,18 @@ for (const seed of seeds) {
       console.warn(`[import-hf] ${seed.repo}: skipped unparseable/zero-size GGUF ${s}`);
     }
     if (quants.length === 0) {
-      failed++;
-      console.error(`[import-hf] ${seed.repo}: no usable GGUF quant found — not writing an entry`);
+      // A repo whose GGUFs carry no recognizable quant token (some name their
+      // files "Balanced"/"Compact" etc.) cannot be represented honestly — we
+      // will not invent quant names. For a DISCOVERED repo that is background
+      // noise, counted but not fatal; for a CURATED seed it is a real failure
+      // the curator should hear about.
+      if (seed.discovered) {
+        skippedGated++;
+        console.warn(`[import-hf] skipped discovered repo ${seed.repo}: no recognizable quant names`);
+      } else {
+        failed++;
+        console.error(`[import-hf] ${seed.repo}: no usable GGUF quant found — not writing an entry`);
+      }
       continue;
     }
     const entry = buildHfEntry(seed, meta, quants);
@@ -100,11 +154,24 @@ for (const seed of seeds) {
         `${quants.map((q) => q.name).join(", ")}, seq ${res.seq})`,
     );
   } catch (err) {
-    failed++;
-    console.error(`[import-hf] FAILED ${seed.repo}: ${err.message}`);
+    // Gated/private repos 401/403 on anonymous access. For DISCOVERED repos
+    // that is expected background noise (we did not choose them) — count and
+    // continue without failing the run. For CURATED seeds it is a real
+    // failure: someone listed a repo we cannot read.
+    const gated = /-> 40[13] /.test(err.message);
+    if (gated && seed.discovered) {
+      skippedGated++;
+      console.warn(`[import-hf] skipped gated/inaccessible discovered repo ${seed.repo}`);
+    } else {
+      failed++;
+      console.error(`[import-hf] FAILED ${seed.repo}: ${err.message}`);
+    }
   }
 }
 
-console.log(`[import-hf] done: ${ok} written, ${failed} failed`);
+console.log(
+  `[import-hf] done: ${ok} written, ${failed} failed` +
+    (skippedGated > 0 ? `, ${skippedGated} gated repo(s) skipped` : ""),
+);
 // Nonzero exit on any failure so a scheduled run cannot silently half-work.
 process.exit(failed === 0 ? 0 : 1);

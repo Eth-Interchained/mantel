@@ -104,3 +104,50 @@ export function buildHfEntry(seed, meta, quants) {
   for (const k of Object.keys(entry)) if (entry[k] === undefined) delete entry[k];
   return entry;
 }
+
+/**
+ * Derive a mantel id (family:tag) from an HF repo id, for DISCOVERED repos
+ * that have no curated seed row.
+ *
+ * "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF" -> "meta-llama-3.1-8b-instruct:gguf"
+ *
+ * Lowercased, the trailing -GGUF stripped (it becomes the :gguf tag), every
+ * run of characters outside [a-z0-9._-] collapsed to a single hyphen, and
+ * leading/trailing separators trimmed so the result satisfies the catalog's
+ * family:tag regex. Returns null when nothing usable survives — the caller
+ * skips-with-a-log rather than inventing an id.
+ */
+export function deriveIdFromRepo(repoId) {
+  const base = String(repoId).split("/").pop() || "";
+  let family = base
+    .toLowerCase()
+    .replace(/[-_.]?gguf$/i, "")
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^[-_.]+|[-_.]+$/g, "");
+  if (!/^[a-z0-9][a-z0-9._-]*$/.test(family)) return null;
+  return `${family}:gguf`;
+}
+
+/**
+ * Map HF pipeline/library tags to mantel's small tag vocabulary — only the
+ * mappings we can defend. A discovered chat model gets "chat"; multimodal
+ * gets "vision"; embedding models get "embedding". Coder/reasoning CANNOT be
+ * derived from HF tags reliably, so discovered repos never get them — a wrong
+ * "coder" tag would seed a ranked feed with junk, which is worse than a
+ * missing tag. Curated seeds carry the judgment tags.
+ */
+export function mapHfTags(hfTags) {
+  const t = new Set(Array.isArray(hfTags) ? hfTags : []);
+  const out = [];
+  if (t.has("image-text-to-text") || t.has("image-to-text") || t.has("visual-question-answering")) {
+    out.push("vision");
+  }
+  if (t.has("sentence-similarity") || t.has("feature-extraction") || t.has("sentence-transformers")) {
+    out.push("embedding");
+  }
+  // Chat only when it is not primarily an embedding model.
+  if ((t.has("text-generation") || t.has("conversational")) && !out.includes("embedding")) {
+    out.push("chat");
+  }
+  return out;
+}
