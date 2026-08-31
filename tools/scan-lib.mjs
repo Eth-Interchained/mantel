@@ -64,12 +64,42 @@ export function mentionsModel(text, modelId) {
   return new RegExp(`(^|[^a-z0-9])${esc(modelId)}([^a-z0-9]|$)`, "i").test(t);
 }
 
+
+/**
+ * Decode the HTML entities HN Algolia embeds in its text fields (and that
+ * users paste into Reddit posts) — seen live on production: excerpts
+ * rendering "https:&#x2F;&#x2F;docs.ollama.com" on the wire and model pages.
+ *
+ * One spec-correct pass: numeric references first (hex and decimal), then the
+ * named set these sources actually emit, with &amp; LAST so "&amp;lt;" decodes
+ * to "&lt;" (one level) and never double-decodes into "<". An unrecognized
+ * entity is left as-is rather than guessed at.
+ */
+export function decodeEntities(text) {
+  return String(text)
+    .replace(/&#x([0-9a-f]+);/gi, (m, h) => {
+      const cp = parseInt(h, 16);
+      return cp > 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : m;
+    })
+    .replace(/&#(\d+);/g, (m, d) => {
+      const cp = parseInt(d, 10);
+      return cp > 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : m;
+    })
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&");
+}
+
 /** Reddit search JSON row -> a mantel signal, or null when unusable. */
 export function redditToSignal(child, modelId) {
   const d = child && child.data ? child.data : null;
   if (!d || typeof d.permalink !== "string" || typeof d.created_utc !== "number") return null;
-  const title = typeof d.title === "string" ? d.title : "";
-  const body = typeof d.selftext === "string" ? d.selftext : "";
+  const title = decodeEntities(typeof d.title === "string" ? d.title : "");
+  const body = decodeEntities(typeof d.selftext === "string" ? d.selftext : "");
   const text = `${title}\n${body}`;
   if (!mentionsModel(text, modelId)) return null;
   const excerpt = (title || body).slice(0, 500);
@@ -89,9 +119,9 @@ export function redditToSignal(child, modelId) {
 /** HN Algolia hit -> a mantel signal, or null when unusable. */
 export function hnToSignal(hit, modelId) {
   if (!hit || !hit.objectID || typeof hit.created_at !== "string") return null;
-  const title = typeof hit.title === "string" ? hit.title : "";
-  const comment = typeof hit.comment_text === "string" ? hit.comment_text : "";
-  const story = typeof hit.story_title === "string" ? hit.story_title : "";
+  const title = decodeEntities(typeof hit.title === "string" ? hit.title : "");
+  const comment = decodeEntities(typeof hit.comment_text === "string" ? hit.comment_text : "");
+  const story = decodeEntities(typeof hit.story_title === "string" ? hit.story_title : "");
   const text = `${title}\n${story}\n${comment}`.replace(/<[^>]+>/g, " ");
   if (!mentionsModel(text, modelId)) return null;
   const excerpt = (title || comment.replace(/<[^>]+>/g, " ") || story).trim().slice(0, 500);

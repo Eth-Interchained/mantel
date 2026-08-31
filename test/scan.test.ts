@@ -11,7 +11,35 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 // @ts-expect-error — plain ESM helper module, no d.ts, intentional.
-import { gradeText, hnToSignal, mentionsModel, redditToSignal } from "../tools/scan-lib.mjs";
+import {
+  decodeEntities,
+  gradeText,
+  hnToSignal,
+  mentionsModel,
+  redditToSignal,
+} from "../tools/scan-lib.mjs";
+
+test("decodeEntities fixes the exact artifact seen on production", () => {
+  // Captured from the live wire: HN comment_text ships hex entities.
+  assert.equal(
+    decodeEntities("https:&#x2F;&#x2F;docs.ollama.com&#x2F;context-length"),
+    "https://docs.ollama.com/context-length",
+  );
+  assert.equal(decodeEntities("I&#x27;ve had &quot;fun&quot;"), 'I\'ve had "fun"');
+  assert.equal(decodeEntities("&gt; quoted &amp; done"), "> quoted & done");
+  assert.equal(decodeEntities("a &#8211; b"), "a – b", "decimal refs decode too");
+});
+
+test("decodeEntities decodes exactly one level — &amp;lt; is a literal <-entity", () => {
+  // Someone WRITING about HTML escaping must not have their text mangled:
+  // "&amp;lt;" is the author showing the string "&lt;", not a "<".
+  assert.equal(decodeEntities("&amp;lt;"), "&lt;");
+});
+
+test("decodeEntities leaves unknown entities alone rather than guessing", () => {
+  assert.equal(decodeEntities("&bogus; stays"), "&bogus; stays");
+  assert.equal(decodeEntities("&#xZZ; stays"), "&#xZZ; stays");
+});
 
 test("gradeText: positive, negative, mixed, neutral — deterministic", () => {
   assert.equal(gradeText("this model is excellent and fast"), "positive");
@@ -100,6 +128,23 @@ test("hnToSignal parses an Algolia hit, strips HTML, grades it", () => {
   assert.equal(s.sourceUrl, "https://news.ycombinator.com/item?id=41234567");
   assert.equal(s.sentiment, "positive");
   assert.ok(!s.excerpt.includes("<code>"), "HTML is stripped from the excerpt");
+});
+
+test("hnToSignal excerpts carry no entity artifacts — the production bug", () => {
+  const hit = {
+    objectID: "9",
+    title: "",
+    story_title: "",
+    comment_text:
+      "qwen3 docs at https:&#x2F;&#x2F;docs.ollama.com&#x2F;context-length — I&#x27;ve tried it, &quot;solid&quot;",
+    author: "petu",
+    created_at: "2026-08-23T10:00:00.000Z",
+  };
+  const s = hnToSignal(hit, "qwen3:32b");
+  assert.ok(s);
+  assert.ok(!s.excerpt.includes("&#x2F;"), "hex entities decoded");
+  assert.ok(!s.excerpt.includes("&quot;"), "named entities decoded");
+  assert.ok(s.excerpt.includes("https://docs.ollama.com/context-length"), "URL reads clean");
 });
 
 test("hnToSignal returns null when the hit never mentions the model", () => {
