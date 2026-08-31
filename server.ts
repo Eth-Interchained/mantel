@@ -37,7 +37,6 @@ const { config, validateConfig } = await import("./src/server/config");
   }
 }
 const { createApp, ensureDatabase } = await import("./src/server/app");
-const { warnIfOpen } = await import("./src/server/auth");
 
 // Open the embedded engine BEFORE the first request. Throws (and exits
 // non-zero below) if the data dir is unusable — an embedded engine that
@@ -47,7 +46,6 @@ await ensureDatabase();
 const server = createApp().listen(config.port, () => {
   console.log(`\x1b[36m⬡ mantel\x1b[0m listening on :${config.port}`);
   console.log(`  embedded NEDB → ${config.nedbDataDir}`);
-  warnIfOpen();
 });
 
 // The #1 boot killer is a port collision (PORT is read by many tools —
@@ -57,12 +55,12 @@ server.on("error", (err: NodeJS.ErrnoException) => {
     console.error(
       `\x1b[31m[mantel] port ${config.port} is already in use.\x1b[0m\n` +
         `  Another process (the Vite dev client? a second links instance?) holds it.\n` +
-        `  Fix: set LINKS_API_PORT to a free port in .env — the dev proxy follows\n` +
+        `  Fix: set MANTEL_API_PORT to a free port in .env — the dev proxy follows\n` +
         `  the same variable automatically. (Generic PORT also works but is read\n` +
-        `  by other tools; LINKS_API_PORT is unambiguous.)`,
+        `  by other tools; MANTEL_API_PORT is unambiguous.)`,
     );
   } else {
-    console.error(`[links] server error: ${err.message}`);
+    console.error(`[mantel] server error: ${err.message}`);
   }
   process.exit(1);
 });

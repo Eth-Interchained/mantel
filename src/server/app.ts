@@ -1,8 +1,8 @@
 /**
  * App assembly — everything except env loading and listening.
  *
- * Exists as a factory so tests can boot the REAL app against a REAL
- * nedbd on an ephemeral port. NEDB Links does not test against mocks;
+ * Exists as a factory so tests can boot the REAL app against the REAL
+ * embedded engine on an ephemeral port. mantel does not test against mocks;
  * the engine is the system under test as much as the app is.
  */
 
@@ -12,26 +12,11 @@ import { join, resolve } from "node:path";
 import cors from "cors";
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 
-import { accounts } from "./accounts";
-import { admin } from "./admin";
-import { accountsEmail } from "./accounts-email";
-import { analytics, analyticsSummary } from "./analytics";
-import { billing, mountWebhook } from "./billing";
-import { mountCashfreeWebhook } from "./cashfree";
 import { config } from "./config";
 import { db } from "./db";
-import { grants } from "./grants";
-import { handles, identities } from "./identities";
-import { payments } from "./payments";
-import { preview } from "./preview";
-import { purchases, purchasesApi } from "./purchases";
-import { demo } from "./demo";
-import { discover } from "./discover";
-import { qrFlyer, qrStudio } from "./qrstudio";
-import { raffles } from "./raffles";
-import { render } from "./render";
-import { uploads } from "./uploads";
-import { upiQr } from "./upiqr";
+import { fitAcrossProfiles, customProfile, fitModel, profileById, PROFILES } from "./fit";
+import { ingest } from "./ingest";
+import { getModel, models } from "./models";
 
 export function createApp(): Express {
   const app = express();
@@ -52,22 +37,10 @@ export function createApp(): Express {
   });
 
   app.use(cors());
-  // Stripe webhook needs the raw body for signature verification —
-  // mounted before the JSON parser touches anything.
-  mountWebhook(app);
-  // Same reason as Stripe's: HMAC is over exact bytes, so this must see
-  // the raw body before any parser rewrites it.
-  mountCashfreeWebhook(app);
   app.use(express.json({ limit: "8mb" }));
-  // Zero-JS pages (/r/:id giveaway entry, confirm) submit real HTML
-  // <form method="post"> — the browser sends application/x-www-form-
-  // urlencoded, which express.json() silently ignores (req.body stays
-  // {}). Without this, EVERY field looks "missing" to the server no
-  // matter what the visitor typed — found live, the entry form was
-  // unusable end-to-end.
   app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 
-  // ── Health — reports every dependency ────────────────────────────────────
+  // ── Health — the engine reports on itself, including integrity ────────────
   app.get("/api/health", async (_req, res) => {
     let nedb: {
       ok: boolean;
@@ -95,142 +68,135 @@ export function createApp(): Express {
       mantel: "ok",
       nedb,
       dataDir: config.nedbDataDir,
-      authConfigured: Boolean(config.adminToken),
-      aiassist: { configured: Boolean(config.aiassistApiKey) },
+      ingestConfigured: Boolean(config.operatorToken),
+      aiassist: { configured: Boolean(config.aiassistApiKey), model: config.aiassistModel },
     });
   });
 
-  // ── Public deployment config — the client's mode switch ──────────────────
+  // ── Public deployment config ──────────────────────────────────────────────
   app.get("/api/config", (_req, res) => {
-    res.json({
-      authMode: config.authMode,
-      brandName: config.brandName,
-      brandKey: config.brandKey,
-      currency: config.currency,
-      brandLogoUrl: config.brandLogoUrl || undefined,
-      defaultTheme: config.defaultTheme,
-      fiatDoor: Boolean(config.stripeSecretKey),
-      limitEnabled: config.limitEnabled,
-      uploads: Boolean(config.imgbbKey) || process.env.LINKS_UPLOAD_TEST === "1",
-      // Public policy numbers — the homepage ledger states the deal
-      // with the same figures the gates enforce.
-      freeProfileLimit: config.freeProfileLimit,
-      freeBlockLimit: config.freeBlockLimit,
-      premiumProfileLimit: config.premiumProfileLimit,
-    });
+    res.json({ brandName: config.brandName, profiles: PROFILES });
   });
 
-  // ── API ───────────────────────────────────────────────────────────────────
-  // ONE account system per deployment. The other product's endpoints
-  // don't exist here — wallet routes 404 on ne-db.com and vice versa.
-  app.use("/api/admin", admin);
-  app.use("/api/auth", config.authMode === "email" ? accountsEmail : accounts);
-  app.use("/api/analytics", analyticsSummary);
-  app.use("/api/billing", billing);
-  app.use("/api/handles", handles);
-  app.use("/api/identities/:id/analytics", analytics);
-  app.use("/api/identities/:id/grants", grants);
-  app.use("/api/identities/:id/payments", payments);
-  app.use("/api/identities/:id/purchases", purchasesApi);
-  app.use("/api/identities/:id/qr", qrStudio);
-  app.use("/api/identities", identities);
-  app.use("/api/preview", preview);
-  app.use("/api/upload", uploads);
+  // ── Domain ────────────────────────────────────────────────────────────────
+  app.use("/api/models", models);
+  app.use("/api/ingest", ingest);
 
-  // ── Deployment brand files (/brand) ───────────────────────────────────────
-  // Static files for the storefront: logo, favicon, og images.
-  // LINKS_ASSETS_DIR (default ./public), served at /brand/<name>.
-  // NOT /assets — Vite owns /assets for the SPA bundles (dist/assets/);
-  // squatting there blackholed index-*.js and white-screened the app.
-  // "brand" is a reserved handle; this mount sits before /:handle.
-  const brandDir = resolve(process.cwd(), process.env.LINKS_ASSETS_DIR || "public");
-  app.use("/brand", express.static(brandDir, { index: false, maxAge: "1h" }));
-  // Terminal: a missing brand file is a 404, never the SPA shell.
-  app.use("/brand", (_req: Request, res: Response) => {
-    res.status(404).send("not found");
+  // ── Fit: "will it run on my box?" ─────────────────────────────────────────
+  app.get("/api/fit/:id", async (req: Request, res: Response) => {
+    const model = await getModel(req.params.id);
+    if (!model) {
+      res.status(404).json({ error: "unknown model", id: req.params.id });
+      return;
+    }
+    res.json({ id: req.params.id, fits: fitAcrossProfiles(readQuants(model)) });
   });
 
-  // ── Editor SPA (production build) ─────────────────────────────────────────
+  // One model against one profile — a known id, or a raw VRAM figure in GiB.
+  app.get("/api/fit/:id/:profile", async (req: Request, res: Response) => {
+    const model = await getModel(req.params.id);
+    if (!model) {
+      res.status(404).json({ error: "unknown model", id: req.params.id });
+      return;
+    }
+    const raw = req.params.profile;
+    const profile = profileById(raw) ?? customProfile(Number(raw));
+    if (!profile) {
+      res.status(400).json({
+        error: "unknown profile",
+        profile: raw,
+        hint: "pass a profile id from /api/config, or a VRAM figure in GiB (e.g. 20)",
+        known: PROFILES.map((p) => p.id),
+      });
+      return;
+    }
+    res.json({ id: req.params.id, fit: fitModel(readQuants(model), profile) });
+  });
+
+  // ── SPA (production build) ────────────────────────────────────────────────
   const dist = resolve(process.cwd(), "dist");
   const hasDist = existsSync(join(dist, "index.html"));
-  // Runtime brand injection: ONE build serves every deployment, so the
-  // shell learns its identity when served, not when built. The injected
-  // blob feeds the pre-paint theme script; branded deployments also get
-  // their own <title> and meta description — crawlers and link previews
-  // read the shell long before any client JS runs.
-  const branded = config.brandName && config.brandName !== "NEDB Links";
   const shellHtml = hasDist
-    ? readFileSync(join(dist, "index.html"), "utf8")
-        .replace(
-          "<head>",
-          `<head><script>window.__LINKS_CONFIG__=${JSON.stringify({
-            brandName: config.brandName,
-            brandLogoUrl: config.brandLogoUrl || undefined,
-            defaultTheme: config.defaultTheme,
-            authMode: config.authMode,
-          })}</script>${
-            config.faviconUrl
-              ? `<link rel="icon" href="${config.faviconUrl}" /><link rel="apple-touch-icon" href="${config.faviconUrl}" />`
-              : ""
-          }`,
-        )
-        .replace(
-          /<title>[^<]*<\/title>/,
-          branded
-            ? `<title>${config.brandName} — one link that holds all your links</title>`
-            : "$&",
-        )
-        .replace(
-          /<meta\s+name="description"[^>]*>/s,
-          branded
-            ? `<meta name="description" content="Claim your handle on ${config.brandName}: one page for every link, a print-grade QR, save-my-contact, giveaways and live stats. Free forever — premium once, never monthly." />`
-            : "$&",
-        )
-    : null;
-  const sendShell = (res: Response): void => {
-    res.setHeader("content-type", "text/html; charset=utf-8");
-    res.send(shellHtml);
-  };
-  if (hasDist) {
-    app.get(["/", "/index.html"], (_req, res) => sendShell(res));
-    app.use(express.static(dist, { index: false }));
-  }
+    ? readFileSync(join(dist, "index.html"), "utf8").replace(
+        "<head>",
+        `<head><script>window.__MANTEL_CONFIG__=${JSON.stringify({
+          brandName: config.brandName,
+        })}</script>`,
+      )
+    : "";
 
-  // ── Public identity surfaces (/:handle, /go/*) ────────────────────────────
-  // Discover mounts BEFORE /:handle so the directory wins the route.
-  app.use(discover);
-  app.use(raffles); // /r/:id pages + /api/raffles — before /:handle
-  app.use(upiQr); // /upi/:identityId/:blockId.svg — before /:handle
-  app.use(purchases); // /buy/:identityId/:blockId — before /:handle
-  app.use(demo); // /demo — the homepage's live "what done looks like"
-  app.use(qrFlyer); // /qr/flyer/:id — print sheet, before /:handle
-  app.use(render);
+  if (hasDist) app.use(express.static(dist, { index: false, maxAge: "1h" }));
 
-  // ── SPA fallback ──────────────────────────────────────────────────────────
   app.get("*", (req: Request, res: Response) => {
     if (req.path.startsWith("/api/")) {
-      res.status(404).json({ error: "not found" });
+      res.status(404).json({ error: "unknown endpoint", path: req.path });
       return;
     }
     if (hasDist) {
-      sendShell(res);
+      res.type("html").send(shellHtml);
       return;
     }
     res
       .status(503)
-      .send("NEDB Links: no production build found. Run `npm run build`, or use `npm run dev`.");
+      .send("mantel: no production build found. Run `npm run build`, or use `npm run dev`.");
   });
 
   return app;
+}
+
+/**
+ * Read a model's quant list defensively.
+ *
+ * Catalog rows come from the engine, and a hand-seeded or partially-migrated
+ * row may carry a malformed quants array. A bad entry is SKIPPED WITH A LOG
+ * naming what was wrong — never coerced, because coercing would mean inventing
+ * a fileGib or a minVramGib, the one thing fit.ts exists to never do.
+ */
+function readQuants(
+  model: Record<string, unknown>,
+): { name: string; fileGib: number; minVramGib: number | null }[] {
+  const raw = model.quants;
+  if (!Array.isArray(raw)) {
+    if (raw !== undefined) {
+      console.warn(
+        `[mantel] model ${String(model._id)} has a non-array "quants" field ` +
+          `(${typeof raw}) — treating as no quant data`,
+      );
+    }
+    return [];
+  }
+  const out: { name: string; fileGib: number; minVramGib: number | null }[] = [];
+  for (const q of raw) {
+    if (typeof q !== "object" || q === null) {
+      console.warn(`[mantel] model ${String(model._id)}: skipping a non-object quant entry`);
+      continue;
+    }
+    const e = q as Record<string, unknown>;
+    if (typeof e.name !== "string" || typeof e.fileGib !== "number") {
+      console.warn(
+        `[mantel] model ${String(model._id)}: skipping quant with missing name/fileGib ` +
+          `(keys: ${Object.keys(e).join(", ")})`,
+      );
+      continue;
+    }
+    out.push({
+      name: e.name,
+      fileGib: e.fileGib,
+      // Anything that is not a real number becomes null = "unmeasured".
+      // Never a fallback to fileGib; see the comment in fit.ts.
+      minVramGib: typeof e.minVramGib === "number" ? e.minVramGib : null,
+    });
+  }
+  return out;
 }
 
 /** Open the embedded engine before the first request. Idempotent.
  *
  *  FATAL on failure, unlike the daemon era where a warning made sense
  *  (nedbd could come up late and the next request would succeed). Embedded
- *  there is no second chance: if the engine cannot open, every route 500s
- *  on its first query and the real cause gets buried request-side. Die
- *  loud, name the dir, list what could actually be wrong. */
+ *  there is no second chance: if the engine cannot open, every route 500s on
+ *  its first query and the real cause gets buried request-side. Die loud, name
+ *  the dir, list what could actually be wrong. */
 export async function ensureDatabase(): Promise<void> {
   try {
     await db.createDatabase();

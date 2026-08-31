@@ -1,10 +1,11 @@
 import { defineApp } from "@interchained/portal-contract";
 
 /**
- * NEDB Links — Portal contract (schema v1)
+ * mantel — Portal contract (schema v1)
  *
  * North Star:
- *   NEDB stores knowledge. Portal renders experiences. Links publishes identity.
+ *   NEDB stores knowledge. Portal renders experiences. mantel shows what your
+ *   hearth can actually run.
  *
  * Design principle (ecosystem-wide):
  *   Engine capability equals product feature.
@@ -18,10 +19,10 @@ import { defineApp } from "@interchained/portal-contract";
  *   available to the community.
  */
 export default defineApp({
-  name: "NEDB Links",
+  name: "mantel",
   version: "0.1.0",
   description:
-    "Identity publishing on NEDB. Claim a handle, build a structured identity, publish it everywhere: profile page, business card, QR, vCard, JSON — every surface is a renderer over one canonical Identity Manifest.",
+    "npmjs for local models, but social. VRAM-honest fit data, and public sentiment stored with a provenance chain back to the post it came from — every claim on every page has a receipt.",
   primaryAudience: [
     "Creators and freelancers",
     "Small businesses (salons, restaurants, studios)",
