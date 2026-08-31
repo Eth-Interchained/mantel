@@ -7,6 +7,7 @@ import {
   type ModelRow,
   type SignalRow,
 } from "../../src/lib/api";
+import { ReviewComposer } from "../../src/lib/ReviewComposer";
 
 export const intent = {
   purpose:
@@ -29,6 +30,7 @@ const SOURCE_LABEL: Record<string, string> = {
   hn: "Hacker News",
   hf: "HuggingFace",
   github: "GitHub",
+  mantel: "mantel review",
 };
 
 const FIT_CLASS: Record<string, string> = {
@@ -126,14 +128,20 @@ function SignalCard({ signal }: { signal: SignalRow }): React.ReactElement {
       </blockquote>
 
       <div className="mt-2 flex items-center gap-3 font-mono text-[11px]">
-        <a
-          href={signal.sourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-cyan-500 underline-offset-4 hover:underline"
-        >
-          read the original ↗
-        </a>
+        {/* Native reviews carry a relative in-page anchor, not an external
+            post — no "read the original ↗" for those, just the receipt. */}
+        {signal.source !== "mantel" ? (
+          <a
+            href={signal.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan-500 underline-offset-4 hover:underline"
+          >
+            read the original ↗
+          </a>
+        ) : (
+          <span className="text-zinc-600">posted on mantel</span>
+        )}
         <a
           href={`/api/models/${encodeURIComponent(signal.modelRef)}/signals/${encodeURIComponent(signal._id)}/trace`}
           target="_blank"
@@ -160,6 +168,9 @@ export default function ModelPage(): React.ReactElement {
     signals: SignalRow[];
     sentiment: Record<string, number>;
   } | null>(null);
+  // Signals are held separately from `data` so a freshly-posted review can be
+  // prepended without a full refetch — the composer's optimistic append.
+  const [signals, setSignals] = useState<SignalRow[]>([]);
   const [fits, setFits] = useState<ModelFit[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fitError, setFitError] = useState<string | null>(null);
@@ -169,7 +180,10 @@ export default function ModelPage(): React.ReactElement {
     let alive = true;
     getModelPage(id)
       .then((r) => {
-        if (alive) setData(r);
+        if (alive) {
+          setData(r);
+          setSignals(r.signals);
+        }
       })
       .catch((err: unknown) => {
         if (alive) setError(err instanceof Error ? err.message : String(err));
@@ -210,8 +224,14 @@ export default function ModelPage(): React.ReactElement {
     );
   }
 
-  const { model, signals, sentiment } = data;
-  const total = Object.values(sentiment).reduce((a, b) => a + b, 0);
+  const { model } = data;
+  // Recompute the tally from the live signal list so a just-posted review is
+  // reflected in the counts without a refetch. Cheap at these sizes.
+  const sentiment = signals.reduce<Record<string, number>>((acc, s) => {
+    acc[s.sentiment] = (acc[s.sentiment] ?? 0) + 1;
+    return acc;
+  }, {});
+  const total = signals.length;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -269,6 +289,20 @@ export default function ModelPage(): React.ReactElement {
                 ))}
               </div>
             ) : null}
+
+            <div className="mt-4">
+              <ReviewComposer
+                modelRef={model._id}
+                onPosted={(s) => {
+                  // Optimistic prepend: dedupe by id so re-posting (which the
+                  // server upserts) replaces rather than doubles the row.
+                  setSignals((prev) => [
+                    s as SignalRow,
+                    ...prev.filter((p) => p._id !== s._id),
+                  ]);
+                }}
+              />
+            </div>
 
             {signals.length === 0 ? (
               <p className="mt-4 font-mono text-sm text-zinc-600">

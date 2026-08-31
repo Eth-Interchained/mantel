@@ -2,12 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
 
 jobs:
   checks:
-    name: typecheck · test · live-api · build
+    name: typecheck · unit · live-api · build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,38 +17,20 @@ jobs:
           node-version: 20
           cache: npm
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Install
         run: npm ci
 
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit tests (renderers)
+      # mantel embeds the NEDB engine in-process — there is NO daemon to
+      # stand up. Every suite opens the real native addon in a scratch data
+      # dir, so the whole test story is just "run the tests". No services.
+      - name: Unit tests (embedded engine, fit, identity, nql, importer)
         run: npm test
 
-      - name: Boot a real NEDB engine
-        run: |
-          pip install nedb-engine
-          nohup nedbd --data /tmp/nedb-ci-data > /tmp/nedbd.log 2>&1 &
-          for i in $(seq 1 30); do
-            if curl -sf http://127.0.0.1:7070/health > /dev/null; then
-              echo "nedbd is up:" && curl -s http://127.0.0.1:7070/health
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "nedbd failed to start" && cat /tmp/nedbd.log && exit 1
-
-      - name: Live API tests (real app, real engine, no mocks)
+      - name: Live API tests (real app, real embedded engine, no mocks)
         run: npm run test:api
 
       - name: Build
         run: npm run build
-
-      - name: Engine log (on failure)
-        if: failure()
-        run: cat /tmp/nedbd.log || true

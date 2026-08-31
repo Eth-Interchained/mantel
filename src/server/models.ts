@@ -77,7 +77,7 @@ export type Model = z.infer<typeof ModelSchema>;
 export type Quant = z.infer<typeof QuantSchema>;
 
 export const SENTIMENTS = ["positive", "negative", "mixed", "neutral"] as const;
-export const SOURCES = ["x", "bluesky", "reddit", "hn", "hf", "github"] as const;
+export const SOURCES = ["x", "bluesky", "reddit", "hn", "hf", "github", "mantel"] as const;
 
 export const SignalSchema = z.object({
   modelRef: z.string().min(2).max(120),
