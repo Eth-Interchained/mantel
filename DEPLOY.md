@@ -134,3 +134,33 @@ restarts are stateless and safe.
 - [ ] Email mode: send yourself a signup — verify the MIAB path end to end
 - [ ] `IMGBB_API_KEY` if you want uploads (absent = URL-only, still works)
 - [ ] Known queue, pre-public-traffic: rate limiting on auth endpoints (uploads already throttle)
+
+
+## Durability under hard stops (learned in production, 2026-08-30)
+
+A VPS reboot emptied the catalog. Two lessons, both now enforced:
+
+1. **The app flushes after every ingest batch and review write** — durability
+   never depends on a graceful exit. The SIGKILL test in
+   `test/durability.test.ts` fails without it, verified both ways.
+2. **Do not run the service through an `npx`/wrapper chain.** systemd's
+   SIGTERM can stop the wrapper while the real node process gets SIGKILLed
+   before any exit hook runs. Use tsx directly:
+
+```ini
+[Service]
+WorkingDirectory=/root/mantel
+EnvironmentFile=/root/mantel/.env
+Environment=NODE_ENV=production
+# tsx binary directly — no npx indirection, signals reach OUR process.
+ExecStart=/root/mantel/node_modules/.bin/tsx server.ts
+Restart=on-failure
+KillSignal=SIGTERM
+TimeoutStopSec=15
+```
+
+3. **Always set an ABSOLUTE `NEDB_DATA_DIR`.** A relative path resolves
+   against the process cwd; a service started from a different directory
+   opens a fresh empty store that looks exactly like data loss. Boot logs now
+   print the resolved absolute path and warn loudly when the store opens at
+   seq 0.
