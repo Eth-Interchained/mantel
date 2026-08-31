@@ -156,6 +156,10 @@ reviews.post("/", async (req: Request, res: Response) => {
     },
   );
 
+  // DURABILITY: a posted review must survive a hard stop — flush the pair
+  // (source doc + signal) before confirming to the author.
+  await db.flush();
+
   res.status(201).json({
     ok: true,
     signalId: signal.doc._id,

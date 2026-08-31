@@ -17,6 +17,7 @@ import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 
 import { config } from "./config";
+import { db } from "./db";
 import { ModelSchema, SignalSchema, recordSignal, upsertModel } from "./models";
 
 export const ingest = Router();
@@ -81,6 +82,14 @@ ingest.post("/model", async (req: Request, res: Response) => {
     return;
   }
   const doc = await upsertModel(parsed.data);
+  // DURABILITY: one fsync per completed write, never per-op inside a batch —
+  // the same batch-fsync philosophy as the engine's Sequencer. Without this,
+  // ingested rows sit in the WAL until the exit hook fires, and a hard stop
+  // (SIGKILL after a mishandled SIGTERM in an npx→tsx→node chain, power loss)
+  // silently loses everything since the last flush. Learned in production:
+  // a reboot emptied the catalog. The SIGKILL test in test/durability.test.ts
+  // fails without this line — verified both ways.
+  await db.flush();
   res.status(201).json({ ok: true, id: doc._id, seq: doc._seq, hash: doc._hash });
 });
 
@@ -121,6 +130,13 @@ ingest.post("/signals", async (req: Request, res: Response) => {
       );
       results.push({ sourceUrl: entry.signal.sourceUrl, ok: false, error: message });
     }
+  }
+
+  // DURABILITY: flush once per batch (see the note on the model route). The
+  // response must not claim "written" for rows that would evaporate on a
+  // hard stop.
+  if (results.some((r) => r.ok)) {
+    await db.flush();
   }
 
   const written = results.filter((r) => r.ok).length;

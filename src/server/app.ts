@@ -230,10 +230,22 @@ export async function ensureDatabase(): Promise<void> {
   try {
     await db.createDatabase();
     const h = await db.health();
+    // Log the RESOLVED absolute path, not the raw env value: a relative
+    // NEDB_DATA_DIR silently resolves against the process cwd, and a service
+    // started from a different directory opens a fresh empty store that looks
+    // exactly like data loss. Make the real location loud at every boot.
+    const resolved = resolve(process.cwd(), config.nedbDataDir);
     console.log(
-      `\x1b[36m⬡\x1b[0m embedded engine ready: ${config.nedbDataDir} ` +
-        `(nedb-engine ${h.version}, ${h.engine}, seq ${h.seq})`,
+      `\x1b[36m⬡\x1b[0m embedded engine ready: ${resolved} ` +
+        `(nedb-engine ${h.version}, ${h.engine}, seq ${h.seq}, cwd ${process.cwd()})`,
     );
+    if (h.seq === 0) {
+      console.warn(
+        `\x1b[33m[mantel] the store at ${resolved} is EMPTY (seq 0). If you expected ` +
+          `data, the likely cause is a relative NEDB_DATA_DIR resolving against a ` +
+          `different cwd than last time — check for stray mantel-data/ dirs.\x1b[0m`,
+      );
+    }
   } catch (err) {
     throw new Error(
       `[mantel] embedded NEDB engine failed to open at "${config.nedbDataDir}": ` +

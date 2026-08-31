@@ -17,7 +17,7 @@
     "guard": "portal guard",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/embedded.test.ts test/fit.test.ts test/identity.test.ts test/identity-parity.test.ts test/nql.test.ts test/import.test.ts test/feeds.test.ts test/import-hf.test.ts test/scan.test.ts",
-    "test:api": "tsx --test test/api.test.ts test/ingest.test.ts test/reviews.test.ts test/feeds-api.test.ts test/timeline.test.ts",
+    "test:api": "tsx --test test/api.test.ts test/ingest.test.ts test/reviews.test.ts test/feeds-api.test.ts test/timeline.test.ts test/durability.test.ts",
     "import:ollama": "node tools/import-ollama.mjs",
     "import:hf": "node tools/import-hf.mjs",
     "sync": "node tools/sync.mjs",
