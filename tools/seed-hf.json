@@ -1,0 +1,37 @@
+[
+  {
+    "repo": "unsloth/DeepSeek-R1-Distill-Qwen-32B-GGUF",
+    "id": "deepseek-r1-distill:32b-gguf",
+    "name": "DeepSeek R1 Distill Qwen 32B (GGUF)",
+    "tags": ["reasoning", "coder"],
+    "summary": "Unsloth's GGUF pack of R1-distilled Qwen 32B — the full quant ladder from Q2_K to F16, sizes straight off HuggingFace."
+  },
+  {
+    "repo": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+    "id": "qwen2.5-coder:7b-gguf",
+    "name": "Qwen2.5 Coder 7B Instruct (GGUF)",
+    "tags": ["coder"],
+    "summary": "Bartowski's GGUF quants of Qwen2.5 Coder 7B — a strong small coder that fits modest cards."
+  },
+  {
+    "repo": "bartowski/Mistral-Nemo-Instruct-2407-GGUF",
+    "id": "mistral-nemo:12b-gguf",
+    "name": "Mistral Nemo 12B Instruct (GGUF)",
+    "tags": ["chat", "multilingual"],
+    "summary": "Mistral Nemo 12B — a 128k-context general model, GGUF quants for local use."
+  },
+  {
+    "repo": "bartowski/gemma-2-9b-it-GGUF",
+    "id": "gemma2:9b-gguf",
+    "name": "Gemma 2 9B Instruct (GGUF)",
+    "tags": ["chat"],
+    "summary": "Google Gemma 2 9B instruct — GGUF quants; a capable mid-small chat model."
+  },
+  {
+    "repo": "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF",
+    "id": "llama3.1:8b-gguf",
+    "name": "Llama 3.1 8B Instruct (GGUF)",
+    "tags": ["chat", "reasoning"],
+    "summary": "Meta Llama 3.1 8B instruct — the ubiquitous small workhorse, GGUF quant ladder."
+  }
+]
